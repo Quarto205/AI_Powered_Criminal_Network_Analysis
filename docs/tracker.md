@@ -60,6 +60,7 @@ The project already has a prototype concept and a working graph plumbing path fr
 | SEC-001 | Move credentials to env/secret config | PLANNED | Backend | P0 | BOOT-002 | No hardcoded secrets. |
 | DB-001 | Implement PostgreSQL migrations | PLANNED | Backend | P0 | BOOT-001 | Follow backend-schema.md. |
 | ING-001 | Implement safe document/CSV ingestion | PLANNED | Data+Backend | P0 | DB-001 | Deterministic demo first. |
+| OCR-001 | Implement OCR preprocessor & text extraction | VERIFIED | ML | P0 | ING-001 | 22 unit tests passing, magic bytes, digital/scanned PDF, provenance offsets, Agent 1 handoff. |
 | NLP-001 | Implement Agent 1 structured extraction | VERIFIED | ML | P0 | ING-001 | 34 unit tests passing, schemas, fallback, offset verification. |
 | ER-001 | Implement entity normalization/resolution | PLANNED | ML+Graph | P0 | NLP-001 | Review low confidence. |
 | GRAPH-001 | Rebuild Neo4j projection safely | PLANNED | Graph | P0 | ER-001 | Idempotent MERGE. |

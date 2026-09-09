@@ -24,6 +24,15 @@ from agents.extraction.schemas import (
     ExtractionJobResponse,
 )
 
+from agents.extraction.ocr import (
+    OCRDocumentResult,
+    OCRDocumentType,
+    OCRPageResult,
+    OCRPreprocessor,
+    OCRProcessingStatus,
+    OCRProvider,
+)
+
 __all__ = [
     "ExtractionEngine",
     "ExtractionEntityType",
@@ -40,4 +49,11 @@ __all__ = [
     "SourceSpanMismatchError",
     "ReferentialIntegrityError",
     "ProviderUnavailableError",
+    "OCRPreprocessor",
+    "OCRProvider",
+    "OCRDocumentResult",
+    "OCRPageResult",
+    "OCRDocumentType",
+    "OCRProcessingStatus",
 ]
+
