@@ -58,7 +58,7 @@ The project already has a prototype concept and a working graph plumbing path fr
 | BOOT-001 | Create docs/ and commit canonical specifications | PLANNED | Lead | P0 | None | Must happen first. |
 | BOOT-002 | Freeze working prototype/tag | PLANNED | Backend | P0 | None | Create rollback point. |
 | SEC-001 | Move credentials to env/secret config | PLANNED | Backend | P0 | BOOT-002 | No hardcoded secrets. |
-| DB-001 | Implement PostgreSQL migrations | PLANNED | Backend | P0 | BOOT-001 | Follow backend-schema.md. |
+| DB-001 | Implement PostgreSQL relational schema & migrations | VERIFIED | Backend | P0 | BOOT-001 | 31 tables across 4 domains, UUID PKs, fixed-decimal amounts, case tenancy, append-only triggers, Alembic migration 0001, 22 unit tests passing (95/95 full suite). |
 | ING-001 | Implement safe document/CSV ingestion | PLANNED | Data+Backend | P0 | DB-001 | Deterministic demo first. |
 | OCR-001 | Implement OCR preprocessor & text extraction | VERIFIED | ML | P0 | ING-001 | 22 unit tests passing, magic bytes, digital/scanned PDF, provenance offsets, Agent 1 handoff. |
 | NLP-001 | Implement Agent 1 structured extraction | VERIFIED | ML | P0 | ING-001 | 34 unit tests passing, schemas, fallback, offset verification. |
