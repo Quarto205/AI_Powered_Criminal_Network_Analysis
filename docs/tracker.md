@@ -66,7 +66,7 @@ The project already has a prototype concept and a working graph plumbing path fr
 | NLP-001 | Implement Agent 1 structured extraction | VERIFIED | ML | P0 | ING-001 | 34 unit tests passing, schemas, fallback, offset verification. |
 | DOC-PIPELINE-001 | Implement Document Task Pipeline & E2E Integration | VERIFIED | Backend+ML | P0 | OCR-001,NLP-001 | 17 integration tests passing (73/73 full suite), RECEIVED->VALIDATED->PROCESSING->EXTRACTED lifecycle, case isolation, storage abstraction, FastAPI endpoint. |
 | ER-001 | Implement entity normalization/resolution | PLANNED | ML+Graph | P0 | NLP-001 | Review low confidence. |
-| GRAPH-001 | Rebuild Neo4j projection safely | PLANNED | Graph | P0 | ER-001 | Idempotent MERGE. |
+| GRAPH-001 | Rebuild Neo4j projection safely | VERIFIED | Backend+Graph | P0 | ER-001 | 100% parameterized Cypher, closed label/rel-type allow-lists, idempotent MERGE projections, case-scoped deletion, deterministic SHA-256 checksums, graph_snapshots ledger, Cytoscape.js output formatting with factual/predicted edge styling, async 202 rebuild API, 503 outage isolation, 20 tests (11 unit + 9 integration, 187/187 full suite). |
 | SNA-001 | Implement analytics baseline | PLANNED | Graph | P0 | GRAPH-001 | Reference-test against NetworkX. |
 | UI-001 | Integrate graph explorer and evidence drawer | PLANNED | Frontend | P0 | GRAPH-001 | Case-scoped APIs only. |
 | ML-001 | Benchmark GATv2 against classical baselines | PLANNED | ML | P1 | GRAPH-001 | Leakage checks mandatory. |
