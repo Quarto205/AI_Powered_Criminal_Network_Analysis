@@ -3,6 +3,9 @@ import { CaseDetails, CaseShellTabId, SystemRole } from '../../types/shell';
 import { CaseShellTabs } from './CaseShellTabs';
 import { PermissionGate } from './PermissionGate';
 import { CaseNotFound } from './CaseNotFound';
+import { GraphCanvas } from '../graph/GraphCanvas';
+import { mockGraphPayload } from '../../mocks/graphMock';
+import { GraphNodeData, GraphEdgeData } from '../../types/graph';
 
 export interface CaseShellProps {
   caseData: CaseDetails | null;
@@ -20,6 +23,8 @@ export const CaseShell: React.FC<CaseShellProps> = ({
   initialTab = 'overview'
 }) => {
   const [activeTab, setActiveTab] = useState<CaseShellTabId>(initialTab);
+  const [selectedNode, setSelectedNode] = useState<GraphNodeData | null>(null);
+  const [selectedEdge, setSelectedEdge] = useState<GraphEdgeData | null>(null);
 
   if (!caseData) {
     return (
@@ -124,7 +129,7 @@ export const CaseShell: React.FC<CaseShellProps> = ({
           </section>
         )}
 
-        {/* Graph Tab (Future Cytoscape.js entry point) */}
+        {/* Graph Tab (Step 2 Cytoscape.js Viewport) */}
         {activeTab === 'graph' && (
           <section
             id="tabpanel-graph"
@@ -132,29 +137,60 @@ export const CaseShell: React.FC<CaseShellProps> = ({
             aria-labelledby="tab-graph"
             className="tab-panel"
           >
-            <div className="placeholder-panel">
-              <div className="placeholder-header">
-                <span className="placeholder-badge-next">STEP 2 ARCHITECTURAL INSERTION POINT</span>
-                <h3 className="placeholder-title">GraphCanvas (Cytoscape.js)</h3>
+            <GraphCanvas
+              graphData={mockGraphPayload}
+              onNodeSelect={(node) => {
+                setSelectedNode(node);
+                setSelectedEdge(null);
+              }}
+              onEdgeSelect={(edge) => {
+                setSelectedEdge(edge);
+                setSelectedNode(null);
+              }}
+              selectedElementId={selectedNode?.id || selectedEdge?.id}
+            />
+
+            {(selectedNode || selectedEdge) && (
+              <div className="graph-selected-bar" role="status" aria-label="Selected Graph Element">
+                <div className="selected-item-info">
+                  {selectedNode && (
+                    <>
+                      <span className="selected-badge">NODE: {selectedNode.entity_type}</span>
+                      <strong>{selectedNode.label}</strong>
+                      <span style={{ color: 'var(--text-muted)' }}>Status: {selectedNode.status}</span>
+                      {selectedNode.is_pivot && (
+                        <span style={{ color: '#fbbf24', fontWeight: 600 }}>(Reference Pivot)</span>
+                      )}
+                    </>
+                  )}
+                  {selectedEdge && (
+                    <>
+                      <span className="selected-badge">EDGE: {selectedEdge.relationship_type}</span>
+                      <span>
+                        Evidence: <strong>{selectedEdge.status}</strong>{' '}
+                        {selectedEdge.is_inferred ? '(Dashed Line)' : '(Solid Line)'}
+                      </span>
+                      {selectedEdge.confidence !== undefined && (
+                        <span style={{ color: 'var(--text-muted)' }}>
+                          Confidence: {(selectedEdge.confidence * 100).toFixed(0)}%
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '2px 8px', fontSize: '11px' }}
+                  onClick={() => {
+                    setSelectedNode(null);
+                    setSelectedEdge(null);
+                  }}
+                >
+                  Clear Selection
+                </button>
               </div>
-              <p className="placeholder-text">
-                Interactive graph canvas for multi-hop neighborhood traversals, link prediction overlays, and SNA centrality visualization.
-              </p>
-              <div className="graph-guidance-box">
-                <h4>Visual Invariants Prepared in Step 1:</h4>
-                <ul>
-                  <li>
-                    <strong>Solid Line:</strong> Observable evidence (<code>OBSERVED</code>, <code>CORROBORATED</code>, <code>CONFIRMED</code>).
-                  </li>
-                  <li>
-                    <strong>Dashed Line:</strong> AI-inferred relationships (<code>INFERRED</code>) with redundant non-color badges.
-                  </li>
-                  <li>
-                    <strong>Non-blocking Context:</strong> Drawer selection maintains persistent graph viewport.
-                  </li>
-                </ul>
-              </div>
-            </div>
+            )}
           </section>
         )}
 

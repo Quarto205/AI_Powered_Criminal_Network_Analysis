@@ -74,9 +74,9 @@ describe('CaseShell Component', () => {
     const graphTabBtn = screen.getByRole('tab', { name: /Graph/i });
     fireEvent.click(graphTabBtn);
 
-    // Graph panel is displayed, Overview is no longer active
-    expect(screen.getByText(/GraphCanvas/i)).toBeInTheDocument();
-    expect(screen.getByText(/Step 2 Architectural Insertion Point/i)).toBeInTheDocument();
+    // Graph canvas is displayed, Overview is no longer active
+    expect(screen.getByTestId('cytoscape-container')).toBeInTheDocument();
+    expect(screen.getByText('EVIDENCE CLASSIFICATION')).toBeInTheDocument();
     expect(screen.queryByText('Overview Workspace')).not.toBeInTheDocument();
 
     // Case metadata remains intact
