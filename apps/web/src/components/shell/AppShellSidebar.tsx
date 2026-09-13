@@ -4,6 +4,7 @@ import { AppDomain } from '../../types/shell';
 export interface AppShellSidebarProps {
   activeDomain: AppDomain;
   onSelectDomain: (domain: AppDomain) => void;
+  onOpenGlobalSearch?: () => void;
 }
 
 interface SidebarItem {
@@ -44,7 +45,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 
 export const AppShellSidebar: React.FC<AppShellSidebarProps> = ({
   activeDomain,
-  onSelectDomain
+  onSelectDomain,
+  onOpenGlobalSearch
 }) => {
   return (
     <aside className="app-sidebar" aria-label="Global Application Navigation">
@@ -58,7 +60,13 @@ export const AppShellSidebar: React.FC<AppShellSidebarProps> = ({
                 <button
                   type="button"
                   className={`sidebar-btn ${isActive ? 'sidebar-btn-active' : ''}`}
-                  onClick={() => onSelectDomain(item.id)}
+                  onClick={() => {
+                    if (item.id === 'search' && onOpenGlobalSearch) {
+                      onOpenGlobalSearch();
+                    } else {
+                      onSelectDomain(item.id);
+                    }
+                  }}
                   aria-current={isActive ? 'page' : undefined}
                   title={item.description}
                 >

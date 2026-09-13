@@ -2,15 +2,34 @@ import React, { useState } from 'react';
 import { AppDomain, SystemRole, SystemHealthStatus, CaseDetails } from './types/shell';
 import { AppShell } from './components/shell/AppShell';
 import { CaseShell } from './components/shell/CaseShell';
-import { mockActiveCase, mockCaseNotFoundResponse } from './mocks/caseMock';
+import { GlobalSearchModal } from './components/search/GlobalSearchModal';
+import { mockActiveCase, mockCaseNotFoundResponse, mockCasesList } from './mocks/caseMock';
+import { CaseSearchResult, EntitySearchResult } from './types/search';
 
 export const App: React.FC = () => {
   const [activeDomain, setActiveDomain] = useState<AppDomain>('cases');
   const [currentRole, setCurrentRole] = useState<SystemRole>('INVESTIGATOR');
   const [healthStatus, setHealthStatus] = useState<SystemHealthStatus>('NORMAL');
   const [simulateCaseNotFound, setSimulateCaseNotFound] = useState<boolean>(false);
+  const [activeCaseId, setActiveCaseId] = useState<string>(mockActiveCase.case_id);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState<boolean>(false);
+  const [selectedEntityIdFromSearch, setSelectedEntityIdFromSearch] = useState<string | null>(null);
 
-  const activeCase: CaseDetails | null = simulateCaseNotFound ? null : mockActiveCase;
+  const selectedCase = mockCasesList.find((c) => c.case_id === activeCaseId) || mockActiveCase;
+  const activeCase: CaseDetails | null = simulateCaseNotFound ? null : selectedCase;
+
+  const handleSelectCase = (caseItem: CaseSearchResult) => {
+    setActiveCaseId(caseItem.case_id);
+    setActiveDomain('cases');
+    setSimulateCaseNotFound(false);
+  };
+
+  const handleSelectEntity = (entity: EntitySearchResult) => {
+    setActiveCaseId(entity.case_id);
+    setSelectedEntityIdFromSearch(entity.entity_id);
+    setActiveDomain('cases');
+    setSimulateCaseNotFound(false);
+  };
 
   return (
     <AppShell
@@ -20,6 +39,7 @@ export const App: React.FC = () => {
       onRoleChange={setCurrentRole}
       onHealthStatusChange={setHealthStatus}
       onSelectDomain={setActiveDomain}
+      onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
     >
       {/* Verification Simulation Strip for Testing RBAC & 404 */}
       <div className="verification-bar" role="toolbar" aria-label="Step 1 Test Controls">
@@ -31,7 +51,7 @@ export const App: React.FC = () => {
             onClick={() => setSimulateCaseNotFound(false)}
             aria-pressed={!simulateCaseNotFound}
           >
-            Authorized Case (DL-2026-CR-0192)
+            Authorized Case ({selectedCase.case_code})
           </button>
           <button
             type="button"
@@ -51,6 +71,7 @@ export const App: React.FC = () => {
           currentUserRole={currentRole}
           onReturnToCases={() => setSimulateCaseNotFound(false)}
           notFoundRequestId={mockCaseNotFoundResponse.request_id}
+          selectedEntityId={selectedEntityIdFromSearch}
         />
       )}
 
@@ -122,6 +143,13 @@ export const App: React.FC = () => {
           </div>
         </section>
       )}
+      {/* Global Search Modal Overlay (Section 19, 24, 84) */}
+      <GlobalSearchModal
+        isOpen={isGlobalSearchOpen}
+        onClose={() => setIsGlobalSearchOpen(false)}
+        onSelectCase={handleSelectCase}
+        onSelectEntity={handleSelectEntity}
+      />
     </AppShell>
   );
 };

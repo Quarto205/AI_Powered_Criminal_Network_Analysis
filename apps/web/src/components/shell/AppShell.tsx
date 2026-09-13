@@ -10,6 +10,7 @@ export interface AppShellProps {
   onRoleChange?: (role: SystemRole) => void;
   onHealthStatusChange?: (status: SystemHealthStatus) => void;
   onSelectDomain: (domain: AppDomain) => void;
+  onOpenGlobalSearch?: () => void;
   children: React.ReactNode;
 }
 
@@ -20,6 +21,7 @@ export interface AppShellProps {
  * - Remains persistently mounted across case-level tab switching.
  * - Preserves global state (navigation domain, system role, health status).
  * - Client-side state transitions without full document reloads.
+ * - Universal '/' shortcut triggers global search when outside editable fields.
  */
 export const AppShell: React.FC<AppShellProps> = ({
   currentRole,
@@ -28,8 +30,32 @@ export const AppShell: React.FC<AppShellProps> = ({
   onRoleChange,
   onHealthStatusChange,
   onSelectDomain,
+  onOpenGlobalSearch,
   children
 }) => {
+  // Universal '/' keyboard shortcut listener (Section 21, 51, 52)
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/') {
+        const target = e.target as HTMLElement | null;
+        const tagName = target?.tagName?.toLowerCase();
+        const isEditable =
+          tagName === 'input' ||
+          tagName === 'textarea' ||
+          tagName === 'select' ||
+          Boolean(target?.isContentEditable);
+
+        if (!isEditable && onOpenGlobalSearch) {
+          e.preventDefault();
+          onOpenGlobalSearch();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onOpenGlobalSearch]);
+
   return (
     <div className="app-shell-layout">
       {/* 21. Master Header */}
@@ -38,6 +64,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         healthStatus={healthStatus}
         onRoleChange={onRoleChange}
         onHealthStatusChange={onHealthStatusChange}
+        onOpenGlobalSearch={onOpenGlobalSearch}
       />
 
       <div className="app-shell-body">
@@ -45,6 +72,7 @@ export const AppShell: React.FC<AppShellProps> = ({
         <AppShellSidebar
           activeDomain={activeDomain}
           onSelectDomain={onSelectDomain}
+          onOpenGlobalSearch={onOpenGlobalSearch}
         />
 
         {/* 18. Persistent Main Viewport */}

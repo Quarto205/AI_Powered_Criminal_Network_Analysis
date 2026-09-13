@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { AppShell } from './AppShell';
 import { CaseShell } from './CaseShell';
@@ -39,6 +39,59 @@ describe('AppShell Component', () => {
     );
 
     expect(screen.getByText('DEGRADED — Provider Offline')).toBeInTheDocument();
+  });
+
+  it('triggers onOpenGlobalSearch via Header and Sidebar search buttons', () => {
+    const onOpenGlobalSearch = vi.fn();
+
+    render(
+      <AppShell
+        currentRole="INVESTIGATOR"
+        healthStatus="NORMAL"
+        activeDomain="cases"
+        onSelectDomain={() => {}}
+        onOpenGlobalSearch={onOpenGlobalSearch}
+      >
+        <div>Content</div>
+      </AppShell>
+    );
+
+    // Header search button
+    const headerSearchBtn = screen.getByRole('button', { name: /Search authorized cases/i });
+    expect(headerSearchBtn).toBeInTheDocument();
+    fireEvent.click(headerSearchBtn);
+    expect(onOpenGlobalSearch).toHaveBeenCalledTimes(1);
+
+    // Sidebar search button
+    const sidebarSearchBtn = screen.getByRole('button', { name: /Global Search/i });
+    fireEvent.click(sidebarSearchBtn);
+    expect(onOpenGlobalSearch).toHaveBeenCalledTimes(2);
+  });
+
+  it('triggers onOpenGlobalSearch on universal "/" shortcut, but ignores typing inside editable controls', () => {
+    const onOpenGlobalSearch = vi.fn();
+
+    render(
+      <AppShell
+        currentRole="INVESTIGATOR"
+        healthStatus="NORMAL"
+        activeDomain="cases"
+        onSelectDomain={() => {}}
+        onOpenGlobalSearch={onOpenGlobalSearch}
+      >
+        <input data-testid="test-input" type="text" />
+      </AppShell>
+    );
+
+    // 1. Pressing '/' on document triggers global search
+    fireEvent.keyDown(window, { key: '/' });
+    expect(onOpenGlobalSearch).toHaveBeenCalledTimes(1);
+
+    // 2. Typing '/' inside an input MUST NOT trigger global search
+    const input = screen.getByTestId('test-input');
+    input.focus();
+    fireEvent.keyDown(input, { key: '/' });
+    expect(onOpenGlobalSearch).toHaveBeenCalledTimes(1); // Still 1
   });
 });
 
@@ -116,6 +169,38 @@ describe('CaseShell Component', () => {
     const layoutSelect = screen.getByLabelText(/Layout:/i);
     fireEvent.change(layoutSelect, { target: { value: 'grid' } });
     expect(layoutSelect).toHaveValue('grid');
+  });
+
+  it('renders CaseSearchInput and pivots to graph tab with selected node on entity selection', () => {
+    render(
+      <CaseShell
+        caseData={mockActiveCase}
+        currentUserRole="INVESTIGATOR"
+        initialTab="overview"
+      />
+    );
+
+    // Starts on overview tab
+    expect(screen.getByText('Overview Workspace')).toBeInTheDocument();
+
+    // Find CaseSearchInput in header
+    const caseSearchInput = screen.getByPlaceholderText('Search entities in active case…');
+    expect(caseSearchInput).toBeInTheDocument();
+
+    // Type 'Person B'
+    fireEvent.change(caseSearchInput, { target: { value: 'Person B' } });
+
+    // Option appears
+    const option = screen.getByRole('option', { name: /Person B/i });
+    expect(option).toBeInTheDocument();
+
+    // Click option
+    fireEvent.click(option);
+
+    // Pivots to graph tab and renders selected bar
+    expect(screen.getByTestId('cytoscape-container')).toBeInTheDocument();
+    expect(screen.getByText('NODE: Person')).toBeInTheDocument();
+    expect(screen.getByText('Person B')).toBeInTheDocument();
   });
 });
 

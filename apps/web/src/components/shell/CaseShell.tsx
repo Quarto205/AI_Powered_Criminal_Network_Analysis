@@ -6,6 +6,7 @@ import { CaseNotFound } from './CaseNotFound';
 import { GraphCanvas } from '../graph/GraphCanvas';
 import { GraphToolbar } from '../graph/GraphToolbar';
 import { filterGraphData } from '../graph/graphFilter';
+import { CaseSearchInput } from '../search/CaseSearchInput';
 import { mockGraphPayload } from '../../mocks/graphMock';
 import {
   GraphNodeData,
@@ -13,6 +14,7 @@ import {
   GraphFilterState,
   DEFAULT_FILTER_STATE
 } from '../../types/graph';
+import { EntitySearchResult } from '../../types/search';
 
 export interface CaseShellProps {
   caseData: CaseDetails | null;
@@ -20,6 +22,7 @@ export interface CaseShellProps {
   onReturnToCases?: () => void;
   notFoundRequestId?: string;
   initialTab?: CaseShellTabId;
+  selectedEntityId?: string | null;
 }
 
 export const CaseShell: React.FC<CaseShellProps> = ({
@@ -27,7 +30,8 @@ export const CaseShell: React.FC<CaseShellProps> = ({
   currentUserRole,
   onReturnToCases,
   notFoundRequestId,
-  initialTab = 'overview'
+  initialTab = 'overview',
+  selectedEntityId
 }) => {
   const [activeTab, setActiveTab] = useState<CaseShellTabId>(initialTab);
   const [selectedNode, setSelectedNode] = useState<GraphNodeData | null>(null);
@@ -67,6 +71,27 @@ export const CaseShell: React.FC<CaseShellProps> = ({
     setSelectedNode(null);
     setSelectedEdge(null);
   };
+
+  const handleCaseEntitySelect = (entity: EntitySearchResult) => {
+    const node = mockGraphPayload.nodes.find((n) => n.data.id === entity.entity_id);
+    if (node) {
+      setSelectedNode(node.data);
+      setSelectedEdge(null);
+      setActiveTab('graph');
+    }
+  };
+
+  // Sync external entity selection (e.g. from GlobalSearchModal)
+  useEffect(() => {
+    if (selectedEntityId) {
+      const node = mockGraphPayload.nodes.find((n) => n.data.id === selectedEntityId);
+      if (node) {
+        setSelectedNode(node.data);
+        setSelectedEdge(null);
+        setActiveTab('graph');
+      }
+    }
+  }, [selectedEntityId]);
 
   if (!caseData) {
     return (
@@ -126,6 +151,14 @@ export const CaseShell: React.FC<CaseShellProps> = ({
               {caseData.entity_count}
             </span>
           </div>
+        </div>
+
+        {/* Case-Scoped Entity Search Input (Section 42) */}
+        <div className="case-header-search">
+          <CaseSearchInput
+            activeCaseId={caseData.case_id}
+            onSelectEntity={handleCaseEntitySelect}
+          />
         </div>
       </header>
 

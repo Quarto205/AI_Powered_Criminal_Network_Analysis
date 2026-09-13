@@ -6,13 +6,15 @@ export interface AppShellHeaderProps {
   healthStatus: SystemHealthStatus;
   onRoleChange?: (role: SystemRole) => void;
   onHealthStatusChange?: (status: SystemHealthStatus) => void;
+  onOpenGlobalSearch?: () => void;
 }
 
 export const AppShellHeader: React.FC<AppShellHeaderProps> = ({
   currentRole,
   healthStatus,
   onRoleChange,
-  onHealthStatusChange
+  onHealthStatusChange,
+  onOpenGlobalSearch
 }) => {
   return (
     <header className="app-header" aria-label="Master Application Header">
@@ -27,6 +29,20 @@ export const AppShellHeader: React.FC<AppShellHeaderProps> = ({
       </div>
 
       <div className="app-header-controls">
+        {/* Global Search Trigger Button (Section 48, 49) */}
+        {onOpenGlobalSearch && (
+          <button
+            type="button"
+            className="header-search-btn"
+            onClick={onOpenGlobalSearch}
+            aria-label="Search authorized cases and entities"
+          >
+            <span className="search-btn-icon" aria-hidden="true">🔍</span>
+            <span className="header-search-text">Search</span>
+            <kbd className="header-search-kbd">/</kbd>
+          </button>
+        )}
+
         {/* System Health Presentation (Section 35, 65) */}
         <div className="health-badge-container" aria-label={`System Status: ${healthStatus}`}>
           <span className="health-label">SYSTEM HEALTH</span>
