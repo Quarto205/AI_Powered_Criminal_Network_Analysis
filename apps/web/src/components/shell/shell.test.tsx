@@ -256,3 +256,37 @@ describe('CaseNotFound (Stealth Authorization)', () => {
     expect(screen.queryByText(/unauthorized/i)).not.toBeInTheDocument();
   });
 });
+
+describe('CaseShell & Timeline Integration', () => {
+  it('navigates to timeline tab, renders TimelineView, and pivots to graph entity upon event inspection', () => {
+    render(
+      <CaseShell
+        caseData={mockActiveCase}
+        currentUserRole="INVESTIGATOR"
+      />
+    );
+
+    // Click Timeline tab
+    const timelineTab = screen.getByRole('tab', { name: /Timeline/i });
+    fireEvent.click(timelineTab);
+
+    // Timeline view and scrubber rendered inside CaseShell
+    expect(screen.getByRole('region', { name: /Timeline Temporal Scrubber/i })).toBeInTheDocument();
+    expect(screen.getByText(/8 \/ 8 Events Visible/i)).toBeInTheDocument();
+
+    // Inspect first event (FIR_LOG connected to Person A)
+    const inspectButtons = screen.getAllByRole('button', { name: /Select event and inspect associated entities/i });
+    expect(inspectButtons.length).toBeGreaterThan(0);
+    fireEvent.click(inspectButtons[0]);
+
+    // Switch to Graph tab
+    const graphTab = screen.getByRole('tab', { name: /Graph/i });
+    fireEvent.click(graphTab);
+
+    // Verify GraphCanvas is mounted and Person A is selected
+    expect(screen.getByTestId('cytoscape-container')).toBeInTheDocument();
+    expect(screen.getByText('NODE: Person')).toBeInTheDocument();
+    expect(screen.getByText('Person A')).toBeInTheDocument();
+  });
+});
+

@@ -15,6 +15,14 @@ import {
   DEFAULT_FILTER_STATE
 } from '../../types/graph';
 import { EntitySearchResult } from '../../types/search';
+import { TimelineView } from '../timeline/TimelineView';
+import { getTimelineForCase } from '../../mocks/timelineMock';
+import {
+  createDefaultFilterState,
+  applyTimelineToGraph,
+  filterTimelineEvents
+} from '../timeline/timelineUtils';
+import { TimelineFilterState, TimelineEvent } from '../../types/timeline';
 
 export interface CaseShellProps {
   caseData: CaseDetails | null;
@@ -38,10 +46,29 @@ export const CaseShell: React.FC<CaseShellProps> = ({
   const [selectedEdge, setSelectedEdge] = useState<GraphEdgeData | null>(null);
   const [filterState, setFilterState] = useState<GraphFilterState>(DEFAULT_FILTER_STATE);
 
-  // In-memory filter derivation (Section 20)
+  // Timeline payload & filter state for active case (Section 18, 23, 35)
+  const activeCaseId = caseData?.case_id || '';
+  const timelinePayload = useMemo(() => {
+    return getTimelineForCase(activeCaseId);
+  }, [activeCaseId]);
+
+  const [timelineFilterState, setTimelineFilterState] = useState<TimelineFilterState>(() =>
+    createDefaultFilterState(timelinePayload.time_bounds)
+  );
+  const [selectedTimelineEventId, setSelectedTimelineEventId] = useState<string | null>(null);
+
+  // Reset timeline filter state and selection when active case changes (Section 23)
+  useEffect(() => {
+    setTimelineFilterState(createDefaultFilterState(timelinePayload.time_bounds));
+    setSelectedTimelineEventId(null);
+  }, [activeCaseId, timelinePayload.time_bounds]);
+
+  // In-memory filter derivation composed with timeline visibility constraints (Section 19, 20)
   const filteredGraphData = useMemo(() => {
-    return filterGraphData(mockGraphPayload, filterState);
-  }, [filterState]);
+    const byToolbar = filterGraphData(mockGraphPayload, filterState);
+    const visibleEvents = filterTimelineEvents(timelinePayload.events, timelineFilterState);
+    return applyTimelineToGraph(byToolbar, timelinePayload.events, visibleEvents);
+  }, [filterState, timelinePayload.events, timelineFilterState]);
 
   // Selection preservation: clear selected element if filtered out (Section 26, 27, 75)
   useEffect(() => {
@@ -70,6 +97,22 @@ export const CaseShell: React.FC<CaseShellProps> = ({
   const handleClearSelection = () => {
     setSelectedNode(null);
     setSelectedEdge(null);
+  };
+
+  const handleResetTimelineFilters = () => {
+    setTimelineFilterState(createDefaultFilterState(timelinePayload.time_bounds));
+  };
+
+  const handleTimelineEventSelect = (event: TimelineEvent) => {
+    setSelectedTimelineEventId(event.event_id);
+    const targetEntityId = event.source_entity_id || event.target_entity_id;
+    if (targetEntityId) {
+      const node = mockGraphPayload.nodes.find((n) => n.data.id === targetEntityId);
+      if (node) {
+        setSelectedNode(node.data);
+        setSelectedEdge(null);
+      }
+    }
   };
 
   const handleCaseEntitySelect = (entity: EntitySearchResult) => {
@@ -280,23 +323,23 @@ export const CaseShell: React.FC<CaseShellProps> = ({
           </section>
         )}
 
-        {/* Timeline Tab */}
+        {/* Timeline Tab (Step 5 Interactive Timeline & Temporal Scrubber) */}
         {activeTab === 'timeline' && (
           <section
             id="tabpanel-timeline"
             role="tabpanel"
             aria-labelledby="tab-timeline"
-            className="tab-panel"
+            className="tab-panel tab-panel-timeline"
           >
-            <div className="placeholder-panel">
-              <div className="placeholder-header">
-                <span className="placeholder-badge">STEP 3 PLACEHOLDER</span>
-                <h3 className="placeholder-title">Timeline & Sequence Navigator</h3>
-              </div>
-              <p className="placeholder-text">
-                Temporal sequence viewer for chronological communications, fund transfers, and transactional events across case entities.
-              </p>
-            </div>
+            <TimelineView
+              events={timelinePayload.events}
+              timeBounds={timelinePayload.time_bounds}
+              filterState={timelineFilterState}
+              onFilterChange={setTimelineFilterState}
+              onResetFilters={handleResetTimelineFilters}
+              onSelectEvent={handleTimelineEventSelect}
+              selectedEventId={selectedTimelineEventId}
+            />
           </section>
         )}
 
