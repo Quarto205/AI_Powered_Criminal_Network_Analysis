@@ -1,11 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { CaseDetails, CaseShellTabId, SystemRole } from '../../types/shell';
 import { CaseShellTabs } from './CaseShellTabs';
 import { PermissionGate } from './PermissionGate';
 import { CaseNotFound } from './CaseNotFound';
 import { GraphCanvas } from '../graph/GraphCanvas';
+import { GraphToolbar } from '../graph/GraphToolbar';
+import { filterGraphData } from '../graph/graphFilter';
 import { mockGraphPayload } from '../../mocks/graphMock';
-import { GraphNodeData, GraphEdgeData } from '../../types/graph';
+import {
+  GraphNodeData,
+  GraphEdgeData,
+  GraphFilterState,
+  DEFAULT_FILTER_STATE
+} from '../../types/graph';
 
 export interface CaseShellProps {
   caseData: CaseDetails | null;
@@ -25,6 +32,41 @@ export const CaseShell: React.FC<CaseShellProps> = ({
   const [activeTab, setActiveTab] = useState<CaseShellTabId>(initialTab);
   const [selectedNode, setSelectedNode] = useState<GraphNodeData | null>(null);
   const [selectedEdge, setSelectedEdge] = useState<GraphEdgeData | null>(null);
+  const [filterState, setFilterState] = useState<GraphFilterState>(DEFAULT_FILTER_STATE);
+
+  // In-memory filter derivation (Section 20)
+  const filteredGraphData = useMemo(() => {
+    return filterGraphData(mockGraphPayload, filterState);
+  }, [filterState]);
+
+  // Selection preservation: clear selected element if filtered out (Section 26, 27, 75)
+  useEffect(() => {
+    if (selectedNode) {
+      const isStillVisible = filteredGraphData.nodes.some(
+        (n) => n.data.id === selectedNode.id
+      );
+      if (!isStillVisible) {
+        setSelectedNode(null);
+      }
+    }
+    if (selectedEdge) {
+      const isStillVisible = filteredGraphData.edges.some(
+        (e) => e.data.id === selectedEdge.id
+      );
+      if (!isStillVisible) {
+        setSelectedEdge(null);
+      }
+    }
+  }, [filteredGraphData, selectedNode, selectedEdge]);
+
+  const handleResetFilters = () => {
+    setFilterState(DEFAULT_FILTER_STATE);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedNode(null);
+    setSelectedEdge(null);
+  };
 
   if (!caseData) {
     return (
@@ -129,16 +171,29 @@ export const CaseShell: React.FC<CaseShellProps> = ({
           </section>
         )}
 
-        {/* Graph Tab (Step 2 Cytoscape.js Viewport) */}
+        {/* Graph Tab (Step 2 Cytoscape.js Viewport + Step 3 GraphToolbar) */}
         {activeTab === 'graph' && (
           <section
             id="tabpanel-graph"
             role="tabpanel"
             aria-labelledby="tab-graph"
-            className="tab-panel"
+            className="tab-panel tab-panel-graph"
           >
+            <GraphToolbar
+              filterState={filterState}
+              onFilterChange={setFilterState}
+              onResetFilters={handleResetFilters}
+              onClearSelection={handleClearSelection}
+              hasSelection={Boolean(selectedNode || selectedEdge)}
+              totalNodesCount={mockGraphPayload.nodes.length}
+              visibleNodesCount={filteredGraphData.nodes.length}
+              totalEdgesCount={mockGraphPayload.edges.length}
+              visibleEdgesCount={filteredGraphData.edges.length}
+            />
+
             <GraphCanvas
-              graphData={mockGraphPayload}
+              graphData={filteredGraphData}
+              layoutName={filterState.layout}
               onNodeSelect={(node) => {
                 setSelectedNode(node);
                 setSelectedEdge(null);
@@ -182,10 +237,8 @@ export const CaseShell: React.FC<CaseShellProps> = ({
                   type="button"
                   className="btn btn-secondary"
                   style={{ padding: '2px 8px', fontSize: '11px' }}
-                  onClick={() => {
-                    setSelectedNode(null);
-                    setSelectedEdge(null);
-                  }}
+                  onClick={handleClearSelection}
+                  aria-label="Clear active graph element selection"
                 >
                   Clear Selection
                 </button>

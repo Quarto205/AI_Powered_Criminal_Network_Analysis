@@ -36,6 +36,65 @@ export type RelationshipStatus =
   | 'INFERRED';
 
 /**
+ * Supported Cytoscape layout algorithms
+ */
+export type LayoutType =
+  | 'cose'
+  | 'grid'
+  | 'concentric'
+  | 'circle';
+
+/**
+ * Single source of truth for canonical entity types
+ */
+export const ALL_ENTITY_TYPES: readonly EntityType[] = [
+  'Person',
+  'Phone',
+  'BankAccount',
+  'Vehicle',
+  'Organization',
+  'Location',
+  'Case',
+  'Evidence',
+  'Offense'
+] as const;
+
+/**
+ * Single source of truth for canonical relationship evidence statuses
+ */
+export const ALL_RELATIONSHIP_STATUSES: readonly RelationshipStatus[] = [
+  'OBSERVED',
+  'CORROBORATED',
+  'CONFIRMED',
+  'REJECTED',
+  'INFERRED'
+] as const;
+
+/**
+ * In-memory presentation filter state for GraphToolbar
+ */
+export interface GraphFilterState {
+  searchTerm: string;
+  selectedEntityTypes: EntityType[];
+  selectedStatuses: RelationshipStatus[];
+  showInferredEdges: boolean;
+  hopDepth: number;
+  layout: LayoutType;
+}
+
+/**
+ * Canonical default filter state
+ */
+export const DEFAULT_FILTER_STATE: GraphFilterState = {
+  searchTerm: '',
+  selectedEntityTypes: [...ALL_ENTITY_TYPES],
+  selectedStatuses: [...ALL_RELATIONSHIP_STATUSES],
+  showInferredEdges: true,
+  hopDepth: 1,
+  layout: 'cose'
+};
+
+/**
  * Graph node payload data
  */
 export interface GraphNodeData {

@@ -5,14 +5,15 @@ import {
   GraphNodeData,
   GraphEdgeData,
   RelationshipStatus,
-  EntityType
+  EntityType,
+  LayoutType
 } from '../../types/graph';
 
 export interface GraphCanvasProps {
   graphData: GraphDataPayload;
   onNodeSelect?: (nodeData: GraphNodeData) => void;
   onEdgeSelect?: (edgeData: GraphEdgeData) => void;
-  layoutName?: 'cose' | 'grid' | 'concentric' | 'circle';
+  layoutName?: LayoutType;
   selectedElementId?: string | null;
 }
 
@@ -276,10 +277,16 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const validation = useMemo(() => validateGraphData(graphData), [graphData]);
 
   // Cytoscape Mount & Teardown Lifecycle
+  const isInitialMountRef = useRef(true);
+  const currentLayoutRef = useRef<LayoutType>(layoutName);
+
   useEffect(() => {
     if (!containerRef.current) return;
     if (!validation.valid) {
       setInitError(`Malformed graph payload: ${validation.errors.join('; ')}`);
+      return;
+    }
+    if (graphData.nodes.length === 0) {
       return;
     }
 
@@ -331,6 +338,7 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
       resizeObserver.observe(containerRef.current);
 
       cyRef.current = cy;
+      currentLayoutRef.current = layoutName;
       setInitError(null);
 
       // Teardown
@@ -344,17 +352,90 @@ export const GraphCanvas: React.FC<GraphCanvasProps> = ({
         err instanceof Error ? err.message : 'Failed to initialize GraphCanvas viewport.'
       );
     }
-  }, [graphData, layoutName, validation]);
+  }, [validation.valid, graphData.nodes.length === 0]);
+
+  // Update Cytoscape elements when graphData changes without destroying instance
+  useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
+
+    const cy = cyRef.current;
+    if (!cy || !validation.valid || graphData.nodes.length === 0) return;
+
+    const containerWidth = containerRef.current?.clientWidth || 800;
+    const containerHeight = containerRef.current?.clientHeight || 600;
+
+    cy.batch(() => {
+      cy.elements().remove();
+      cy.add([
+        ...graphData.nodes.map((n) => ({ data: { ...n.data } })),
+        ...graphData.edges.map((e) => ({ data: { ...e.data } }))
+      ]);
+    });
+
+    const layout = cy.layout({
+      name: layoutName,
+      animate: false,
+      boundingBox: {
+        x1: 0,
+        y1: 0,
+        w: containerWidth,
+        h: containerHeight
+      }
+    } as cytoscape.LayoutOptions);
+    layout.run();
+
+    if (selectedElementId) {
+      const target = cy.$(`#${selectedElementId}`);
+      if (target.length > 0) {
+        target.select();
+      }
+    }
+  }, [graphData]);
+
+  // Change layout algorithm without destroying Cytoscape or reloading data
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || !containerRef.current || graphData.nodes.length === 0) return;
+    if (currentLayoutRef.current === layoutName) return;
+
+    currentLayoutRef.current = layoutName;
+    const containerWidth = containerRef.current.clientWidth || 800;
+    const containerHeight = containerRef.current.clientHeight || 600;
+
+    const layout = cy.layout({
+      name: layoutName,
+      animate: false,
+      boundingBox: {
+        x1: 0,
+        y1: 0,
+        w: containerWidth,
+        h: containerHeight
+      }
+    } as cytoscape.LayoutOptions);
+    layout.run();
+
+    if (selectedElementId) {
+      const target = cy.$(`#${selectedElementId}`);
+      if (target.length > 0) {
+        target.select();
+      }
+    }
+  }, [layoutName, selectedElementId]);
 
   // Element Selection Synchronization
   useEffect(() => {
     const cy = cyRef.current;
-    if (!cy || !selectedElementId) return;
+    if (!cy) return;
 
     cy.elements().unselect();
-    const target = cy.$(`#${selectedElementId}`);
-    if (target.length > 0) {
-      target.select();
+    if (selectedElementId) {
+      const target = cy.$(`#${selectedElementId}`);
+      if (target.length > 0) {
+        target.select();
+      }
     }
   }, [selectedElementId]);
 

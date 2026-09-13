@@ -82,6 +82,41 @@ describe('CaseShell Component', () => {
     // Case metadata remains intact
     expect(screen.getByText('DL-2026-CR-0192')).toBeInTheDocument();
   });
+
+  it('renders GraphToolbar in Graph tab and updates graph upon search and filter interactions', () => {
+    render(
+      <CaseShell
+        caseData={mockActiveCase}
+        currentUserRole="INVESTIGATOR"
+        initialTab="graph"
+      />
+    );
+
+    // 1. Both GraphToolbar and GraphCanvas exist in the graph tab
+    expect(screen.getByRole('toolbar', { name: /Graph visualization controls/i })).toBeInTheDocument();
+    expect(screen.getByTestId('cytoscape-container')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search nodes in canvas...')).toBeInTheDocument();
+
+    // 2. Search for non-existent node -> renders empty state
+    const searchInput = screen.getByPlaceholderText('Search nodes in canvas...');
+    fireEvent.change(searchInput, { target: { value: 'non-matching-query-xyz' } });
+
+    expect(
+      screen.getByText('No graph relationships available for current pivot.')
+    ).toBeInTheDocument();
+
+    // 3. Clear search -> restores canvas and legend
+    const clearBtn = screen.getByRole('button', { name: /Clear search text/i });
+    fireEvent.click(clearBtn);
+
+    expect(screen.getByTestId('cytoscape-container')).toBeInTheDocument();
+    expect(screen.getByText('EVIDENCE CLASSIFICATION')).toBeInTheDocument();
+
+    // 4. Layout selector updates layout state
+    const layoutSelect = screen.getByLabelText(/Layout:/i);
+    fireEvent.change(layoutSelect, { target: { value: 'grid' } });
+    expect(layoutSelect).toHaveValue('grid');
+  });
 });
 
 describe('PermissionGate Component & Audit Security', () => {
