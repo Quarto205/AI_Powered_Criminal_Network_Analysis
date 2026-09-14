@@ -57,7 +57,7 @@ export const AppShell: React.FC<AppShellProps> = ({
   }, [onOpenGlobalSearch]);
 
   return (
-    <div className="app-shell-layout">
+    <div data-testid="app-shell" className="app-shell-layout">
       {/* 21. Master Header */}
       <AppShellHeader
         currentRole={currentRole}
@@ -73,6 +73,8 @@ export const AppShell: React.FC<AppShellProps> = ({
           activeDomain={activeDomain}
           onSelectDomain={onSelectDomain}
           onOpenGlobalSearch={onOpenGlobalSearch}
+          currentRole={currentRole}
+          onRoleChange={(r) => onRoleChange?.(r as SystemRole)}
         />
 
         {/* 18. Persistent Main Viewport */}

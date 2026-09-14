@@ -3,29 +3,53 @@ import { AppDomain, SystemRole, SystemHealthStatus, CaseDetails } from './types/
 import { AppShell } from './components/shell/AppShell';
 import { CaseShell } from './components/shell/CaseShell';
 import { GlobalSearchModal } from './components/search/GlobalSearchModal';
-import { mockActiveCase, mockCaseNotFoundResponse, mockCasesList } from './mocks/caseMock';
+import { mockActiveCase, mockCaseNotFoundResponse } from './mocks/caseMock';
 import { CaseSearchResult, EntitySearchResult } from './types/search';
+import { CaseProvider, useCase } from './context/CaseContext';
+import { SelectionProvider } from './context/SelectionContext';
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const caseCtx = useCase();
   const [activeDomain, setActiveDomain] = useState<AppDomain>('cases');
   const [currentRole, setCurrentRole] = useState<SystemRole>('INVESTIGATOR');
   const [healthStatus, setHealthStatus] = useState<SystemHealthStatus>('NORMAL');
   const [simulateCaseNotFound, setSimulateCaseNotFound] = useState<boolean>(false);
-  const [activeCaseId, setActiveCaseId] = useState<string>(mockActiveCase.case_id);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState<boolean>(false);
   const [selectedEntityIdFromSearch, setSelectedEntityIdFromSearch] = useState<string | null>(null);
 
-  const selectedCase = mockCasesList.find((c) => c.case_id === activeCaseId) || mockActiveCase;
-  const activeCase: CaseDetails | null = simulateCaseNotFound ? null : selectedCase;
+  const handleRoleChange = (newRole: SystemRole) => {
+    setCurrentRole(newRole);
+    if (caseCtx?.setCurrentRole) {
+      caseCtx.setCurrentRole(newRole as any);
+    }
+  };
+
+  const activeCase: CaseDetails | null = simulateCaseNotFound
+    ? null
+    : (caseCtx.activeCase
+        ? {
+            case_id: caseCtx.activeCase.case_id,
+            case_code: caseCtx.activeCase.case_code,
+            title: caseCtx.activeCase.title,
+            description: caseCtx.activeCase.description || '',
+            status: caseCtx.activeCase.status as any,
+            jurisdiction: caseCtx.activeCase.jurisdiction,
+            created_by: caseCtx.activeCase.created_by,
+            created_at: caseCtx.activeCase.created_at,
+            member_role: (caseCtx.activeCase as any).member_role || 'INVESTIGATOR',
+            document_count: caseCtx.activeCase.document_count || 8,
+            entity_count: caseCtx.activeCase.entity_count || 14,
+          }
+        : mockActiveCase);
 
   const handleSelectCase = (caseItem: CaseSearchResult) => {
-    setActiveCaseId(caseItem.case_id);
+    caseCtx.selectCase(caseItem.case_id);
     setActiveDomain('cases');
     setSimulateCaseNotFound(false);
   };
 
   const handleSelectEntity = (entity: EntitySearchResult) => {
-    setActiveCaseId(entity.case_id);
+    caseCtx.selectCase(entity.case_id);
     setSelectedEntityIdFromSearch(entity.entity_id);
     setActiveDomain('cases');
     setSimulateCaseNotFound(false);
@@ -36,7 +60,7 @@ export const App: React.FC = () => {
       currentRole={currentRole}
       healthStatus={healthStatus}
       activeDomain={activeDomain}
-      onRoleChange={setCurrentRole}
+      onRoleChange={handleRoleChange}
       onHealthStatusChange={setHealthStatus}
       onSelectDomain={setActiveDomain}
       onOpenGlobalSearch={() => setIsGlobalSearchOpen(true)}
@@ -51,7 +75,7 @@ export const App: React.FC = () => {
             onClick={() => setSimulateCaseNotFound(false)}
             aria-pressed={!simulateCaseNotFound}
           >
-            Authorized Case ({selectedCase.case_code})
+            Authorized Case ({activeCase ? activeCase.case_code : 'None'})
           </button>
           <button
             type="button"
@@ -153,3 +177,15 @@ export const App: React.FC = () => {
     </AppShell>
   );
 };
+
+export const App: React.FC = () => {
+  return (
+    <CaseProvider>
+      <SelectionProvider>
+        <AppContent />
+      </SelectionProvider>
+    </CaseProvider>
+  );
+};
+
+export default App;

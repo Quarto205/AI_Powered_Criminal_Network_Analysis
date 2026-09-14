@@ -19,11 +19,11 @@ export const AppShellHeader: React.FC<AppShellHeaderProps> = ({
   return (
     <header className="app-header" aria-label="Master Application Header">
       <div className="app-header-brand">
-        <div className="app-logo-mark" aria-hidden="true">
-          SIH
+        <div className="app-logo-mark">
+          SIH26189
         </div>
         <div className="app-brand-text">
-          <span className="app-title">SIH26189</span>
+          <span className="app-title">SIH26189 — CNAS</span>
           <span className="app-subtitle">AI-Powered Criminal Network Analysis System</span>
         </div>
       </div>

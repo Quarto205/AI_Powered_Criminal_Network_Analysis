@@ -408,7 +408,7 @@ export const GraphToolbar: React.FC<GraphToolbarProps> = ({
           aria-label={`Graph elements: ${visibleNodesCount} of ${totalNodesCount} nodes, ${visibleEdgesCount ?? 0} of ${totalEdgesCount ?? 0} edges visible`}
         >
           <span className="metric-pill">
-            Nodes: <strong>{visibleNodesCount}</strong>/{totalNodesCount}
+            Visible Nodes: <strong>{visibleNodesCount}</strong>/{totalNodesCount}
           </span>
           <span className="metric-pill">
             Edges: <strong>{visibleEdgesCount ?? 0}</strong>/{totalEdgesCount ?? 0}

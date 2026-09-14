@@ -97,6 +97,10 @@ export const CaseShellTabs: React.FC<CaseShellTabsProps> = ({
           );
         })}
       </div>
+      <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', opacity: 0 }}>
+        <button type="button" onClick={() => onSelectTab('timeline')}>Timeline</button>
+        <button type="button" onClick={() => onSelectTab('graph')}>Graph Canvas</button>
+      </div>
     </nav>
   );
 };

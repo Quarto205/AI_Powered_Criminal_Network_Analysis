@@ -331,6 +331,11 @@ export const CaseShell: React.FC<CaseShellProps> = ({
             aria-labelledby="tab-timeline"
             className="tab-panel tab-panel-timeline"
           >
+            <div className="tab-panel-header" style={{ padding: '16px 20px 0 20px' }}>
+              <h2 className="tab-panel-title" style={{ fontSize: '18px', fontWeight: 600, color: '#f8fafc' }}>
+                Case Event & Interaction Timeline
+              </h2>
+            </div>
             <TimelineView
               events={timelinePayload.events}
               timeBounds={timelinePayload.time_bounds}
