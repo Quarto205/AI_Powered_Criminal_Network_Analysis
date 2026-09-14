@@ -1,19 +1,27 @@
-# Byte-compiled / optimized / DLL files
+# Environment & Secrets (SEC-001)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+*.pem
+*.key
+*.cert
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
+env/
+venv/
+.venv/
+ENV/
 build/
 develop-eggs/
 dist/
-node_modules/
-.vite/
-apps/web/
 downloads/
 eggs/
 .eggs/
@@ -23,58 +31,51 @@ parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
-# Virtual environments
-venv/
-.venv/
-env/
-ENV/
-env.bak/
-venv.bak/
-
-# Unit test / coverage reports
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
 htmlcov/
 .tox/
 .nox/
-.coverage
-.coverage.*
-.cache
 nosetests.xml
 coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
 
-# Environments and secrets
-.env
-.env.*
-!.env.example
+# Node / Frontend
+node_modules/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+dist/
+dist-ssr/
+*.local
 
-# IDE & Editor files
-.vscode/
-.idea/
-*.sublime-workspace
-*.sublime-project
-
-# Antigravity IDE & Supermemory local artifacts
-.agents/
+# Database & Local Data
+*.db
+*.sqlite
+*.sqlite3
 .supermemory/
 useful files/
 scratch/
 *.log
-docs/PROJECT_MEMORY_README.md
-docs/project-knowledge/
-scripts/supermemory_*.py
-scripts/verify_memory.py
 
-# Operating System files
+# IDE & Editor files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+
+# OS files
 .DS_Store
 Thumbs.db
 ehthumbs.db
