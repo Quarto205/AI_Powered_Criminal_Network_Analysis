@@ -39,7 +39,7 @@ The project already has a prototype concept and a working graph plumbing path fr
 
 ## 2. Current phase
 
-**PHASE: Documentation consolidation -> repository bootstrap.** The immediate goal is to transform the recovered architecture into a controlled implementation contract. Do not begin broad feature work until the schema, folder structure, API contract and tracker are committed.
+**PHASE: Phase 1 Functional UI & Backend Baseline Complete -> Ready for Phase 2 Visual Styling.** All core backend pipelines, Agent 1 extraction, PostgreSQL system-of-record, Neo4j projections, and Phase 1 functional UI components are integrated, tested (225 backend tests + 199 frontend tests passing), and verified on the `testing` branch.
 
 ## 3. Completed work
 
@@ -68,7 +68,8 @@ The project already has a prototype concept and a working graph plumbing path fr
 | ER-001 | Evidence Detail, Human Review Overrides & Analysis APIs | VERIFIED | Backend | P0 | GRAPH-001 | 7 new endpoints (entity detail, relationship detail, reviews, analysis trigger, analysis run status, priority scores, pattern alerts), human decision primacy, soft merge with alias absorption & relationship redirection, non-accusatory terminology, server-side 404 case isolation, async 202 analysis trigger, 13 new tests (7 unit + 6 integration, 200/200 full suite). |
 | GRAPH-001 | Rebuild Neo4j projection safely | VERIFIED | Backend+Graph | P0 | ER-001 | 100% parameterized Cypher, closed label/rel-type allow-lists, idempotent MERGE projections, case-scoped deletion, deterministic SHA-256 checksums, graph_snapshots ledger, Cytoscape.js output formatting with factual/predicted edge styling, async 202 rebuild API, 503 outage isolation, 20 tests (11 unit + 9 integration, 187/187 full suite). |
 | SNA-001 | Implement analytics baseline | PLANNED | Graph | P0 | GRAPH-001 | Reference-test against NetworkX. |
-| UI-001 | Integrate graph explorer and evidence drawer | PLANNED | Frontend | P0 | GRAPH-001 | Case-scoped APIs only. |
+| UI-001 | Phase 1 Functional UI Integration | VERIFIED | Frontend | P0 | GRAPH-001,ER-001 | Unified Track A (Canvas, Search, Timeline) with Track B (Drawers, Triage, Alerts, Reporting, Audit, API client & Contexts); 18 test files (199/199 tests passing), 0 DB imports in frontend, production Vite build passing. |
+| INT-001 | Testing Branch Full Integration & Multi-Level Validation | VERIFIED | Integration | P0 | UI-001,ER-001,DB-001 | Merged backend (postgres domain repos, evidence-api) and frontend (timeline, reporting, alerts-ui) into testing; 225/225 backend tests passing; 199/199 frontend tests passing; 5/5 Phase 0 contract/security checks passing; 0 hardcoded secrets. |
 | ML-001 | Benchmark GATv2 against classical baselines | PLANNED | ML | P1 | GRAPH-001 | Leakage checks mandatory. |
 | RANK-001 | Implement investigative ranking + explanations | PLANNED | ML+Backend | P1 | SNA-001,ML-001 | Non-accusatory wording. |
 | DEMO-001 | Create deterministic canonical SIH scenario | PLANNED | All | P0 | SNA-001,UI-001 | Replay twice. |
