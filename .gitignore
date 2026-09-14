@@ -12,7 +12,9 @@ build/
 develop-eggs/
 dist/
 node_modules/
+.vite/
 apps/web/dist/
+apps/web/.vite/
 downloads/
 eggs/
 .eggs/

@@ -42,29 +42,6 @@ export const DEMO_CASES_LIST: CaseListItem[] = [
   },
 ];
 
-export const DEMO_ALERTS = {
-  case_id: DEMO_CASE_ID,
-  total: 1,
-  alerts: [
-    {
-      alert_id: 'alt-001',
-      case_id: DEMO_CASE_ID,
-      rule_id: 'RULE-SNA-01',
-      alert_type: 'HIGH_BETWEENNESS_BRIDGE',
-      severity: 'MEDIUM',
-      description: 'Synthetic lead for investigation',
-      status: 'NEW',
-      contributing_entities: [],
-      created_at: '2026-08-14T09:30:00Z',
-    },
-  ],
-};
-
-export const DEMO_SCORES = {
-  case_id: DEMO_CASE_ID,
-  total: 0,
-  scores: [],
-};
 
 export const DEMO_AUDIT_LOGS = [
   {

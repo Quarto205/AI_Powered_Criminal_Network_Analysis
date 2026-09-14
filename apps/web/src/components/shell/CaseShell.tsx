@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Network, LayoutDashboard, Clock, MapPin, Hash } from 'lucide-react';
+import { Network, LayoutDashboard, Clock, MapPin, Hash, Bell } from 'lucide-react';
 import { useCase } from '../../context/CaseContext';
 import { useSelection } from '../../context/SelectionContext';
 import { Badge } from '../common/Badge';
@@ -15,9 +15,11 @@ import { OverviewTab } from '../tabs/OverviewTab';
 import { GraphCanvas } from '../tabs/GraphCanvas';
 import { GraphToolbar } from '../tabs/GraphToolbar';
 import { TimelineTab } from '../tabs/TimelineTab';
+import { AlertsTab } from '../tabs/AlertsTab';
 import { EntityDrawer } from '../drawers/EntityDrawer';
 import { EvidencePanel } from '../drawers/EvidencePanel';
 import { EntityReviewQueue } from '../triage/EntityReviewQueue';
+import { AIExplanationPanel } from '../panels/AIExplanationPanel';
 import { apiClient } from '../../api';
 import { CytoscapeNode, CytoscapeEdge } from '../../contracts/graph';
 import { EntityTypes } from '../../contracts/common';
@@ -82,6 +84,7 @@ export const CaseShell: React.FC = () => {
     { id: 'overview', label: 'Case Overview', icon: <LayoutDashboard size={15} /> },
     { id: 'graph', label: 'Graph Canvas', icon: <Network size={15} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={15} /> },
+    { id: 'alerts', label: 'Pattern Alerts', icon: <Bell size={15} /> },
   ];
 
   return (
@@ -208,6 +211,7 @@ export const CaseShell: React.FC = () => {
           )}
 
           {activeTab === 'timeline' && <TimelineTab />}
+          {activeTab === 'alerts' && <AlertsTab />}
         </div>
 
         {/* Slide-out Drawers (Preserves Graph Canvas Context) */}
@@ -219,6 +223,9 @@ export const CaseShell: React.FC = () => {
         )}
         {activeDrawer === 'REVIEW_QUEUE' && (
           <EntityReviewQueue onClose={closeDrawer} />
+        )}
+        {activeDrawer === 'AI_EXPLANATION' && (
+          <AIExplanationPanel onClose={closeDrawer} />
         )}
       </div>
     </div>
