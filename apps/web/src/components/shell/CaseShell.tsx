@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Network, LayoutDashboard, Clock, MapPin, Hash } from 'lucide-react';
+import { Network, LayoutDashboard, Clock, MapPin, Hash, Shield } from 'lucide-react';
 import { useCase } from '../../context/CaseContext';
 import { useSelection } from '../../context/SelectionContext';
 import { Badge } from '../common/Badge';
@@ -15,6 +15,7 @@ import { OverviewTab } from '../tabs/OverviewTab';
 import { GraphCanvas } from '../tabs/GraphCanvas';
 import { GraphToolbar } from '../tabs/GraphToolbar';
 import { TimelineTab } from '../tabs/TimelineTab';
+import { AuditTab } from '../tabs/AuditTab';
 import { EntityDrawer } from '../drawers/EntityDrawer';
 import { EvidencePanel } from '../drawers/EvidencePanel';
 import { EntityReviewQueue } from '../triage/EntityReviewQueue';
@@ -82,6 +83,7 @@ export const CaseShell: React.FC = () => {
     { id: 'overview', label: 'Case Overview', icon: <LayoutDashboard size={15} /> },
     { id: 'graph', label: 'Graph Canvas', icon: <Network size={15} /> },
     { id: 'timeline', label: 'Timeline', icon: <Clock size={15} /> },
+    { id: 'audit', label: 'Audit Ledger', icon: <Shield size={15} /> },
   ];
 
   return (
@@ -208,6 +210,7 @@ export const CaseShell: React.FC = () => {
           )}
 
           {activeTab === 'timeline' && <TimelineTab />}
+          {activeTab === 'audit' && <AuditTab />}
         </div>
 
         {/* Slide-out Drawers (Preserves Graph Canvas Context) */}

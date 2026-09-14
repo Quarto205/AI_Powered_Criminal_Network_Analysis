@@ -66,14 +66,4 @@ export const DEMO_SCORES = {
   scores: [],
 };
 
-export const DEMO_AUDIT_LOGS = [
-  {
-    audit_id: 'aud-001',
-    actor: 'ins_sharma@delhipolice.gov.in (Supervisor)',
-    action: 'CASE_CREATE',
-    target_item: 'CR-2026-DEL-0891',
-    timestamp: '2026-08-14T09:30:00Z',
-    outcome: 'SUCCESS',
-  },
-];
 

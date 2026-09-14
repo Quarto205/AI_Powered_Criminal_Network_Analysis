@@ -6,3 +6,4 @@ export * from './demoCase';
 export * from './demoGraph';
 export * from './demoEvidence';
 export * from './demoTimeline';
+export * from './demoAudit';
