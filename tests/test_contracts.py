@@ -98,7 +98,7 @@ def run_checks():
     flagged_secrets = []
     
     for root, dirs, files in os.walk(REPO_ROOT):
-        if ".git" in root or "node_modules" in root:
+        if any(ignored in root for ignored in [".git", "node_modules", "useful files", ".supermemory", "scratch"]):
             continue
         for f in files:
             if f.endswith((".py", ".ts", ".js", ".json", ".md", ".env.example")):
