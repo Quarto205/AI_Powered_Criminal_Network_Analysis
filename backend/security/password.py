@@ -5,7 +5,10 @@ Enforces salted, computationally secure password storage and constant-time verif
 
 import logging
 from argon2 import PasswordHasher, Type
-from argon2.exceptions import InvalidHashError, VerifyMismatchError, VerificationError
+from argon2.exceptions import InvalidHash, VerificationError, VerifyMismatchError
+
+# Alias for backward compatibility
+InvalidHashError = InvalidHash
 
 logger = logging.getLogger("backend.security.password")
 

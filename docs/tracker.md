@@ -1,4 +1,4 @@
-# Living Project Tracker
+ Living Project Tracker
 
 **Project:** SIH26189 — AI-Powered Criminal Network Analysis System  
 **Status:** Consolidated implementation-ready specification  

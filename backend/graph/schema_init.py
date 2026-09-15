@@ -50,8 +50,7 @@ def init_graph_schema(manager: Neo4jConnectionManager = None) -> bool:
         return False
 
     try:
-        driver = mgr.get_driver()
-        with driver.session() as session:
+        with mgr.get_session() as session:
             # 1. Initialize constraints
             for stmt in CONSTRAINT_STATEMENTS:
                 try:

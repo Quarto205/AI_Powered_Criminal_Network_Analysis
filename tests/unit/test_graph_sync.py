@@ -1,3 +1,4 @@
+from backend.db.session import get_db, get_engine, get_session_factory
 """
 Unit Tests for Neo4j Graph Database Integration and Projection Sync.
 Validates:

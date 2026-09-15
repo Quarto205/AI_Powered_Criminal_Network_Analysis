@@ -1,3 +1,4 @@
+from backend.db.session import get_db, get_engine, get_session_factory
 """
 Integration Tests for Case Graph API and Graph Rebuild Endpoint.
 Validates:

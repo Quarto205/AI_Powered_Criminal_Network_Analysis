@@ -5,11 +5,10 @@ Every JSON response exposes:
 - success: bool
 - data: Any | None
 - error: ApiErrorDetail | None
-- request_id: str (UUID-v4) - Canonical external key
-- tracking_id: str (UUID-v4) - Backwards compatible key
+- tracking_id: str (UUID-v4)
 """
 
-from typing import Any, Dict, Generic, Optional, TypeVar, Union
+from typing import Any, Dict, Generic, Optional, TypeVar
 from uuid import uuid4
 from pydantic import BaseModel, Field, model_validator
 
@@ -38,26 +37,17 @@ class ApiSuccessResponse(BaseModel, Generic[T]):
     success: bool = Field(default=True, description="Always true for successful operations")
     data: T = Field(..., description="Primary response payload")
     error: Optional[ApiErrorDetail] = Field(default=None, description="Always null on success")
-    request_id: str = Field(default_factory=lambda: str(uuid4()), description="Canonical request correlation UUID-v4 per 04_API_SPEC.md")
-    tracking_id: str = Field(default="", description="Request correlation UUID-v4 for backwards compatibility")
+    request_id: str = Field(default="", description="Canonical request correlation UUID-v4")
+    tracking_id: str = Field(default="", description="Request correlation UUID-v4 (backward-compatible alias)")
 
     @model_validator(mode="before")
     @classmethod
-    def sync_request_tracking_id(cls, data: Any) -> Any:
+    def _sync_ids(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            req_id = data.get("request_id") or data.get("tracking_id")
-            if req_id:
-                data.setdefault("request_id", req_id)
-                data.setdefault("tracking_id", req_id)
+            req_id = data.get("request_id") or data.get("tracking_id") or str(uuid4())
+            data.setdefault("request_id", req_id)
+            data.setdefault("tracking_id", req_id)
         return data
-
-    @model_validator(mode="after")
-    def ensure_both_ids(self) -> "ApiSuccessResponse[T]":
-        if not self.tracking_id and self.request_id:
-            self.tracking_id = self.request_id
-        elif not self.request_id and self.tracking_id:
-            self.request_id = self.tracking_id
-        return self
 
 
 class ApiErrorResponse(BaseModel):
@@ -65,30 +55,17 @@ class ApiErrorResponse(BaseModel):
     success: bool = Field(default=False, description="Always false for error responses")
     data: Optional[Any] = Field(default=None, description="Always null on error")
     error: ApiErrorDetail = Field(..., description="Structured error details")
-    request_id: str = Field(default_factory=lambda: str(uuid4()), description="Canonical request correlation UUID-v4 per 04_API_SPEC.md")
-    tracking_id: str = Field(default="", description="Request correlation UUID-v4 for backwards compatibility")
+    request_id: str = Field(default="", description="Canonical request correlation UUID-v4")
+    tracking_id: str = Field(default="", description="Request correlation UUID-v4 (backward-compatible alias)")
 
     @model_validator(mode="before")
     @classmethod
-    def sync_request_tracking_id(cls, data: Any) -> Any:
+    def _sync_ids(cls, data: Any) -> Any:
         if isinstance(data, dict):
-            req_id = data.get("request_id") or data.get("tracking_id")
-            if req_id:
-                data.setdefault("request_id", req_id)
-                data.setdefault("tracking_id", req_id)
+            req_id = data.get("request_id") or data.get("tracking_id") or str(uuid4())
+            data.setdefault("request_id", req_id)
+            data.setdefault("tracking_id", req_id)
         return data
-
-    @model_validator(mode="after")
-    def ensure_both_ids(self) -> "ApiErrorResponse":
-        if not self.tracking_id and self.request_id:
-            self.tracking_id = self.request_id
-        elif not self.request_id and self.tracking_id:
-            self.request_id = self.tracking_id
-        return self
-
-
-# Canonical generic alias per task specification
-ApiResponse = ApiSuccessResponse
 
 
 def envelope_success(

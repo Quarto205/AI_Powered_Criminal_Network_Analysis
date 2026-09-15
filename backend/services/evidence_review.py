@@ -8,6 +8,7 @@ Encapsulates:
 - Automatic Neo4j graph projection synchronization following PostgreSQL mutations
 """
 
+from concurrent.futures import ThreadPoolExecutor
 import logging
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -43,6 +44,46 @@ from backend.services.graph_projection import GraphProjectionService
 
 logger = logging.getLogger("backend.services.evidence_review")
 
+_graph_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="graph-projection-worker")
+
+
+def _run_graph_projection_worker(
+    case_id: UUID,
+    entity_id: Optional[UUID] = None,
+    relationship_id: Optional[UUID] = None,
+    action: str = "",
+    session_factory: Optional[Any] = None,
+) -> None:
+    """
+    Asynchronous worker task executing Neo4j projection decoupled from the HTTP request.
+    Failures do not affect PostgreSQL transactions.
+    """
+    try:
+        from backend.db.session import get_session_factory
+        factory = session_factory or get_session_factory()
+        db = factory()
+        try:
+            projection = GraphProjectionService(db=db)
+            if entity_id:
+                entity = db.query(Entity).filter(Entity.entity_id == entity_id, Entity.case_id == case_id).first()
+                if entity:
+                    if action == ReviewAction.MERGE:
+                        projection.rebuild_case_graph(case_id)
+                    else:
+                        projection.upsert_entity(entity)
+            elif relationship_id:
+                if action == ReviewAction.REJECT:
+                    projection.rebuild_case_graph(case_id)
+                else:
+                    rel = db.query(Relationship).filter(Relationship.relationship_id == relationship_id, Relationship.case_id == case_id).first()
+                    if rel:
+                        projection.upsert_relationship(rel)
+            logger.info(f"Async graph projection completed for case {case_id}")
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Async graph projection failed for case {case_id}: {e}", exc_info=True)
+
 
 class ReviewServiceError(Exception):
     """Raised on invalid review actions, missing entities, or cross-case violations."""
@@ -75,9 +116,43 @@ class EvidenceReviewService:
     """
     Service managing authoritative PostgreSQL evidence inspection and human overrides.
     """
-    def __init__(self, db: Session, graph_projection_service: Optional[GraphProjectionService] = None):
+    def __init__(
+        self,
+        db: Session,
+        graph_projection_service: Optional[GraphProjectionService] = None,
+        background_tasks: Optional[Any] = None,
+        session_factory: Optional[Any] = None,
+    ):
         self.db = db
         self.graph_projection = graph_projection_service or GraphProjectionService(db=db)
+        self.background_tasks = background_tasks
+        self.session_factory = session_factory or getattr(db, "session_factory", None)
+
+    def _dispatch_graph_job(
+        self,
+        case_id: UUID,
+        entity_id: Optional[UUID] = None,
+        relationship_id: Optional[UUID] = None,
+        action: str = "",
+    ) -> None:
+        if self.background_tasks is not None:
+            self.background_tasks.add_task(
+                _run_graph_projection_worker,
+                case_id=case_id,
+                entity_id=entity_id,
+                relationship_id=relationship_id,
+                action=action,
+                session_factory=self.session_factory,
+            )
+        else:
+            _graph_executor.submit(
+                _run_graph_projection_worker,
+                case_id=case_id,
+                entity_id=entity_id,
+                relationship_id=relationship_id,
+                action=action,
+                session_factory=self.session_factory,
+            )
 
     # ==========================================================================
     # 1. ENTITY DETAIL & PROVENANCE
@@ -236,7 +311,7 @@ class EvidenceReviewService:
         target_type = target_type.upper()
         action = action.upper()
 
-        if target_type == ReviewTargetType.ENTITY:
+        if target_type in (ReviewTargetType.ENTITY, ReviewTargetType.ENTITY_RESOLUTION, ReviewTargetType.EXTRACTION):
             return self._review_entity(
                 case_id=case_id,
                 actor_uuid=actor_uuid,
@@ -245,7 +320,7 @@ class EvidenceReviewService:
                 reason=reason,
                 secondary_id=secondary_target_id,
             )
-        elif target_type == ReviewTargetType.RELATIONSHIP:
+        elif target_type in (ReviewTargetType.RELATIONSHIP, ReviewTargetType.PREDICTION):
             return self._review_relationship(
                 case_id=case_id,
                 actor_uuid=actor_uuid,
@@ -255,6 +330,9 @@ class EvidenceReviewService:
             )
         else:
             raise ReviewServiceError(f"Unsupported target_type '{target_type}'")
+
+    # Backward/Forward compatible alias
+    record_review = apply_review_override
 
     def _review_entity(
         self,
@@ -280,22 +358,16 @@ class EvidenceReviewService:
             resulting_status = "CONFIRMED"
             self.db.commit()
 
-            # Synchronize to Neo4j
-            try:
-                self.graph_projection.upsert_entity(entity)
-            except Exception as e:
-                logger.error(f"Neo4j sync failed after entity confirmation: {e}")
+            # Asynchronously dispatch graph projection job
+            self._dispatch_graph_job(case_id=case_id, entity_id=entity.entity_id, action=action)
 
         elif action == ReviewAction.REJECT:
             entity.status = "REJECTED"
             resulting_status = "REJECTED"
             self.db.commit()
 
-            # Synchronize to Neo4j
-            try:
-                self.graph_projection.upsert_entity(entity)
-            except Exception as e:
-                logger.error(f"Neo4j sync failed after entity rejection: {e}")
+            # Asynchronously dispatch graph projection job
+            self._dispatch_graph_job(case_id=case_id, entity_id=entity.entity_id, action=action)
 
         elif action == ReviewAction.MERGE:
             if not secondary_id:
@@ -342,8 +414,8 @@ class EvidenceReviewService:
                 if r.target_entity_uuid != entity.entity_id:
                     r.source_entity_uuid = entity.entity_id
                 else:
-                    # Self-loop prevention: archive relationship
-                    r.status = "MERGED_SELF_LOOP"
+                    # Self-loop prevention: mark retired relationship as REJECTED to comply with check constraint
+                    r.status = "REJECTED"
 
             incoming_rels = (
                 self.db.query(Relationship)
@@ -354,8 +426,8 @@ class EvidenceReviewService:
                 if r.source_entity_uuid != entity.entity_id:
                     r.target_entity_uuid = entity.entity_id
                 else:
-                    # Self-loop prevention: archive relationship
-                    r.status = "MERGED_SELF_LOOP"
+                    # Self-loop prevention: mark retired relationship as REJECTED to comply with check constraint
+                    r.status = "REJECTED"
 
             # 5. Soft-retire secondary entity
             secondary.status = "MERGED"
@@ -364,11 +436,8 @@ class EvidenceReviewService:
 
             self.db.commit()
 
-            # 6. Synchronize full case graph to Neo4j to reflect redirected edges cleanly
-            try:
-                self.graph_projection.rebuild_case_graph(case_id)
-            except Exception as e:
-                logger.error(f"Neo4j sync failed after entity merge: {e}")
+            # Asynchronously dispatch graph projection rebuild
+            self._dispatch_graph_job(case_id=case_id, entity_id=entity.entity_id, action=action)
 
         else:
             raise ReviewServiceError(f"Unsupported action '{action}' for entity review.")
@@ -390,6 +459,7 @@ class EvidenceReviewService:
             resulting_status=resulting_status,
             secondary_target_id=secondary_id,
             reason=reason,
+            override_notes=reason,
         )
 
     def _review_relationship(
@@ -411,19 +481,17 @@ class EvidenceReviewService:
         if action == ReviewAction.CONFIRM:
             rel.status = "CONFIRMED"
             self.db.commit()
-            try:
-                self.graph_projection.upsert_relationship(rel)
-            except Exception as e:
-                logger.error(f"Neo4j sync failed after relationship confirmation: {e}")
+            self._dispatch_graph_job(case_id=case_id, relationship_id=rel.relationship_id, action=action)
 
         elif action == ReviewAction.REJECT:
-            rel.status = "REJECTED"
-            self.db.commit()
-            try:
-                # Rebuild case graph so rejected edge is omitted
-                self.graph_projection.rebuild_case_graph(case_id)
-            except Exception as e:
-                logger.error(f"Neo4j sync failed after relationship rejection: {e}")
+            from backend.services.relationship_lifecycle import soft_delete_relationship
+            rel = soft_delete_relationship(
+                db=self.db,
+                relationship_id=relationship_id,
+                user_id=actor_uuid,
+                reason=reason
+            )
+            self._dispatch_graph_job(case_id=case_id, relationship_id=rel.relationship_id, action=action)
 
         else:
             raise ReviewServiceError(f"Unsupported action '{action}' for relationship review.")
@@ -444,4 +512,5 @@ class EvidenceReviewService:
             action=action,
             resulting_status=rel.status,
             reason=reason,
+            override_notes=reason,
         )

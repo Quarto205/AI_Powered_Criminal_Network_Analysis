@@ -14,7 +14,7 @@ class SecuritySettings(BaseModel):
     Never hardcodes secret keys or credentials.
     """
     jwt_secret_key: str = Field(
-        default="sih26189-dev-secret-key-change-in-production-non-negotiable",
+        ...,
         description="HMAC SHA-256 secret key for signing JWTs",
     )
     jwt_algorithm: str = Field(
@@ -31,8 +31,7 @@ class SecuritySettings(BaseModel):
         """Loads security settings from environment variables."""
         secret_key = os.getenv("JWT_SECRET_KEY")
         if not secret_key:
-            # Fall back to a default for testing/dev
-            secret_key = "sih26189-dev-secret-key-change-in-production-non-negotiable"
+            raise ValueError("JWT_SECRET_KEY environment variable is missing but required.")
 
         algorithm = os.getenv("JWT_ALGORITHM", "HS256")
         expire_seconds = int(os.getenv("JWT_ACCESS_TOKEN_EXPIRE_SECONDS", "28800"))

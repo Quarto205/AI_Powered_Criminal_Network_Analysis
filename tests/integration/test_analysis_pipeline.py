@@ -1,3 +1,4 @@
+from backend.db.session import get_db, get_engine, get_session_factory
 """
 Integration Tests for Asynchronous Analysis Triggers, Run Lifecycle,
 Investigative Priority Rankings, Deterministic Pattern Alerts, and Human Primacy.
@@ -30,11 +31,19 @@ from backend.security.audit import SecurityAuditAction
 from backend.security.password import hash_password
 from backend.security.rbac import SystemRoles
 from backend.security.tokens import create_access_token
+from backend.config.security import SecuritySettings, set_security_settings
 
 
 @pytest.fixture
 def analysis_test_env():
     """Sets up SQLite test environment for analysis pipeline and intelligence tests."""
+    test_settings = SecuritySettings(
+        jwt_secret_key="analysis-test-deterministic-jwt-secret-key-32b!",
+        jwt_algorithm="HS256",
+        jwt_access_token_expire_seconds=28800,
+    )
+    set_security_settings(test_settings)
+    
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
@@ -244,6 +253,7 @@ def analysis_test_env():
 
     app.dependency_overrides.clear()
     db.close()
+    set_security_settings(None)
 
 
 class TestAnalysisPipeline:

@@ -25,8 +25,8 @@ from backend.db.base import Base
 from backend.db.models.analytics import AuditLog
 from backend.db.models.identity import Case, CaseMember, Role, User, UserRole
 from backend.db.models.ingestion import Document
-from backend.db.session import get_db
-from backend.schemas.document_jobs import DocumentState
+from backend.db.session import get_db, get_engine, get_session_factory
+from backend.schemas.document_jobs import DocumentState, DocumentTaskResult
 from backend.security.audit import SecurityAuditAction
 from backend.security.rbac import Permissions, SystemRoles
 from backend.security.tokens import create_access_token
@@ -92,6 +92,73 @@ def setup_pipeline_test_environment():
     Base.metadata.create_all(pipeline_test_engine)
     app.dependency_overrides[get_db] = override_pipeline_get_db
 
+    from backend.repositories.document_repository import DocumentRepository
+    from backend.services.document_service import DocumentService
+    from backend.services.document_pipeline import DocumentPipeline
+    from backend.jobs.document_worker import DocumentWorker
+    from backend.jobs.worker_bridge import WorkerBridge
+    import apps.api.routers.documents as doc_router
+
+    class PipelineTestingDocumentWorker(DocumentWorker):
+        def __init__(self, pipeline: DocumentPipeline):
+            super().__init__(pipeline)
+            self._pending_requests = {}
+
+        def submit_job(self, request):
+            job_id = request.job_id
+            self._pending_requests[job_id] = request
+            from datetime import datetime, timezone
+            self._jobs[job_id] = DocumentTaskResult(
+                job_id=job_id,
+                document_id=request.document_id,
+                case_id=request.case_id,
+                status=DocumentState.RECEIVED,
+                created_at=datetime.now(timezone.utc),
+            )
+            return job_id
+
+        async def wait_for_job(self, job_id, timeout=30.0):
+            import asyncio
+            if job_id in self._pending_requests and job_id not in self._tasks:
+                req = self._pending_requests[job_id]
+                self._tasks[job_id] = asyncio.create_task(self.execute_task(req))
+            return await super().wait_for_job(job_id, timeout=timeout)
+
+        def clear(self):
+            super().clear()
+            self._pending_requests.clear()
+
+    test_repo = DocumentRepository(session_factory=PipelineTestingSessionLocal)
+    test_pipeline = DocumentPipeline(
+        repository=test_repo,
+        storage=doc_router.get_storage(),
+    )
+    test_worker = PipelineTestingDocumentWorker(pipeline=test_pipeline)
+    test_bridge = WorkerBridge(worker=test_worker)
+    test_service = DocumentService(
+        repository=test_repo,
+        storage=doc_router.get_storage(),
+        worker_bridge=test_bridge,
+    )
+
+    orig_repo = doc_router._repository
+    orig_pipeline = doc_router._pipeline
+    orig_worker = doc_router._worker
+    orig_worker_bridge = doc_router._worker_bridge
+    orig_service = doc_router._document_service
+
+    doc_router._repository = test_repo
+    doc_router._pipeline = test_pipeline
+    doc_router._worker = test_worker
+    doc_router._worker_bridge = test_bridge
+    doc_router._document_service = test_service
+
+    app.dependency_overrides[doc_router.get_repository] = lambda: test_repo
+    app.dependency_overrides[doc_router.get_document_service] = lambda: test_service
+    app.dependency_overrides[doc_router.get_worker] = lambda: test_worker
+    app.dependency_overrides[doc_router.get_worker_bridge] = lambda: test_bridge
+    app.dependency_overrides[doc_router.get_pipeline] = lambda: test_pipeline
+
     session = PipelineTestingSessionLocal()
     for role_name in [SystemRoles.INVESTIGATOR, SystemRoles.ANALYST, SystemRoles.SUPERVISOR]:
         existing = session.query(Role).filter_by(name=role_name).first()
@@ -102,8 +169,21 @@ def setup_pipeline_test_environment():
 
     yield
 
+    doc_router._repository = orig_repo
+    doc_router._pipeline = orig_pipeline
+    doc_router._worker = orig_worker
+    doc_router._worker_bridge = orig_worker_bridge
+    doc_router._document_service = orig_service
+
     app.dependency_overrides.pop(get_db, None)
-    Base.metadata.drop_all(pipeline_test_engine)
+    app.dependency_overrides.pop(doc_router.get_repository, None)
+    app.dependency_overrides.pop(doc_router.get_document_service, None)
+    app.dependency_overrides.pop(doc_router.get_worker, None)
+    app.dependency_overrides.pop(doc_router.get_worker_bridge, None)
+    app.dependency_overrides.pop(doc_router.get_pipeline, None)
+
+    if pipeline_test_engine.dialect.name == "sqlite":
+        Base.metadata.drop_all(pipeline_test_engine)
 
 
 @pytest.fixture(scope="function")

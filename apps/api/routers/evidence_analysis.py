@@ -13,7 +13,7 @@ and append-only audit logging.
 """
 
 import logging
-from typing import Optional
+from typing import Dict, List, Optional, Any
 from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session
@@ -153,7 +153,76 @@ def get_relationship_evidence_detail(
 
 
 # ==============================================================================
-# 2. HUMAN REVIEW OVERRIDES API
+# 2. EVIDENCE TRACE API
+# ==============================================================================
+
+@router.get(
+    "/cases/{case_id}/evidence/{evidence_id}",
+    response_model=ApiSuccessResponse[Any],
+    responses={
+        401: {"model": ApiErrorResponse},
+        403: {"model": ApiErrorResponse},
+        404: {"model": ApiErrorResponse},
+    },
+)
+def get_relationship_evidence_trace(
+    request: Request,
+    case_id: UUID,
+    evidence_id: UUID,
+    auth_ctx: CaseAuthContext = Depends(verify_case_access(Permissions.ENTITY_READ)),
+    db: Session = Depends(get_db),
+):
+    """
+    Exposes the Dempster-Shafer provenance trace and confidence values.
+    """
+    tracking_id = _resolve_tracking_id(request)
+    
+    from backend.db.models.entities import Relationship, Entity
+    rel = db.query(Relationship).filter_by(relationship_id=evidence_id, case_id=case_id).first()
+    if not rel:
+        raise HTTPException(status_code=404, detail="Relationship trace not found")
+        
+    source_e = db.query(Entity).filter_by(entity_id=rel.source_entity_uuid).first()
+    target_e = db.query(Entity).filter_by(entity_id=rel.target_entity_uuid).first()
+    
+    from backend.schemas.evidence import EvidenceTraceResponse, EvidenceTraceItem
+    
+    items = []
+    for ev in rel.evidence:
+        items.append(EvidenceTraceItem(
+            evidence_id=ev.evidence_id,
+            source_ref=ev.source_ref,
+            support_type=ev.support_type,
+            provenance_spans=[]
+        ))
+        
+    from backend.db.models.analytics import AuditLog
+    audits = db.query(AuditLog).filter_by(case_id=case_id, target_item=str(rel.relationship_id)).all()
+    audit_events = [{"action": a.action_code, "timestamp": a.timestamp.isoformat(), "actor": str(a.actor_uuid)} for a in audits]
+
+    data = EvidenceTraceResponse(
+        relationship_id=rel.relationship_id,
+        case_id=rel.case_id,
+        source_entity=RelationshipEndpointSummary(entity_id=source_e.entity_id, canonical_name=source_e.canonical_name, entity_type=source_e.entity_type),
+        target_entity=RelationshipEndpointSummary(entity_id=target_e.entity_id, canonical_name=target_e.canonical_name, entity_type=target_e.entity_type),
+        type=rel.type,
+        status=rel.status,
+        evidence_items=items,
+        extraction_confidence=1.0,
+        entity_match_confidence=1.0,
+        relationship_confidence=rel.relationship_confidence,
+        belief=rel.belief,
+        disbelief=rel.disbelief,
+        uncertainty=rel.uncertainty,
+        conflict_mass=rel.conflict_mass,
+        audit_events=audit_events,
+        created_at=rel.created_at
+    )
+    return envelope_success(data=data.model_dump(), tracking_id=tracking_id)
+
+
+# ==============================================================================
+# 3. HUMAN REVIEW OVERRIDES API
 # ==============================================================================
 
 @router.post(
@@ -171,6 +240,7 @@ def submit_review_override(
     request: Request,
     case_id: UUID,
     payload: ReviewRequest,
+    background_tasks: BackgroundTasks,
     auth_ctx: CaseAuthContext = Depends(verify_case_access(Permissions.REVIEW_OVERRIDE)),
     db: Session = Depends(get_db),
 ):
@@ -180,7 +250,7 @@ def submit_review_override(
     Human decisions are authoritative and cannot be overwritten by downstream AI models.
     """
     tracking_id = _resolve_tracking_id(request)
-    service = EvidenceReviewService(db=db)
+    service = EvidenceReviewService(db=db, background_tasks=background_tasks)
     try:
         result = service.apply_review_override(
             case_id=case_id,
@@ -210,7 +280,7 @@ def submit_review_override(
 
 
 # ==============================================================================
-# 3. ANALYSIS & INTELLIGENCE APIS
+# 4. ANALYSIS & INTELLIGENCE APIS
 # ==============================================================================
 
 @router.post(

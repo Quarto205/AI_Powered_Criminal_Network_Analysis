@@ -50,7 +50,7 @@ from backend.schemas.documents import (
     DocumentListResponse,
     DocumentUploadData,
 )
-from backend.schemas.envelope import ApiSuccessResponse
+from backend.schemas.envelope import ApiSuccessResponse, envelope_success
 from backend.security.audit import SecurityAuditAction, record_security_event
 from backend.security.rbac import Permissions, SystemRoles, has_permission
 from backend.services.document_pipeline import DocumentPipeline
@@ -68,6 +68,13 @@ _document_service: Optional[DocumentService] = None
 
 
 def get_repository() -> DocumentRepository:
+    global _repository
+    if _repository is None or _repository.session_factory is None:
+        from backend.db.session import get_session_factory
+        if _repository is None:
+            _repository = DocumentRepository(session_factory=get_session_factory)
+        else:
+            _repository.session_factory = get_session_factory
     return _repository
 
 
@@ -193,20 +200,17 @@ async def upload_document(
     )
 
     tracking_id = get_tracking_id()
-    response_payload = {
-        "success": True,
-        "data": upload_data.model_dump(mode="json"),
-        "error": None,
-        "tracking_id": tracking_id,
-        # Backward-compatibility root properties for test_case_isolation & test_doc_pipeline
+    env = envelope_success(data=upload_data.model_dump(mode="json"), tracking_id=tracking_id)
+    payload = env.model_dump(mode="json")
+    payload.update({
         "document_id": str(upload_data.document_id),
         "job_id": str(upload_data.job_id),
         "case_id": str(upload_data.case_id),
         "status": upload_data.status,
-    }
+    })
     return JSONResponse(
         status_code=status.HTTP_202_ACCEPTED,
-        content=response_payload,
+        content=payload,
         headers={"X-Tracking-ID": tracking_id},
     )
 
@@ -255,14 +259,10 @@ async def list_documents(
     )
 
     tracking_id = get_tracking_id()
+    env = envelope_success(data=list_resp.model_dump(mode="json"), tracking_id=tracking_id)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={
-            "success": True,
-            "data": list_resp.model_dump(mode="json"),
-            "error": None,
-            "tracking_id": tracking_id,
-        },
+        content=env.model_dump(mode="json"),
         headers={"X-Tracking-ID": tracking_id},
     )
 
@@ -305,18 +305,16 @@ async def get_document_details(
     )
 
     tracking_id = get_tracking_id()
+    env = envelope_success(data=detail_resp.model_dump(mode="json"), tracking_id=tracking_id)
+    payload = env.model_dump(mode="json")
+    payload.update({
+        "document_id": str(detail_resp.document_id),
+        "case_id": str(detail_resp.case_id),
+        "status": detail_resp.status,
+    })
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={
-            "success": True,
-            "data": detail_resp.model_dump(mode="json"),
-            "error": None,
-            "tracking_id": tracking_id,
-            # Root fields for test_doc_pipeline compatibility
-            "document_id": str(detail_resp.document_id),
-            "case_id": str(detail_resp.case_id),
-            "status": detail_resp.status,
-        },
+        content=payload,
         headers={"X-Tracking-ID": tracking_id},
     )
 
@@ -359,14 +357,10 @@ async def get_document_chunks(
     )
 
     tracking_id = get_tracking_id()
+    env = envelope_success(data=chunk_resp.model_dump(mode="json"), tracking_id=tracking_id)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={
-            "success": True,
-            "data": chunk_resp.model_dump(mode="json"),
-            "error": None,
-            "tracking_id": tracking_id,
-        },
+        content=env.model_dump(mode="json"),
         headers={"X-Tracking-ID": tracking_id},
     )
 
@@ -413,14 +407,10 @@ async def delete_document(
     )
 
     tracking_id = get_tracking_id()
+    env = envelope_success(data=archive_resp.model_dump(mode="json"), tracking_id=tracking_id)
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={
-            "success": True,
-            "data": archive_resp.model_dump(mode="json"),
-            "error": None,
-            "tracking_id": tracking_id,
-        },
+        content=env.model_dump(mode="json"),
         headers={"X-Tracking-ID": tracking_id},
     )
 
@@ -498,16 +488,15 @@ async def get_document_direct(
         )
 
     tracking_id = get_tracking_id()
+    env = envelope_success(data=doc_record.model_dump(mode="json"), tracking_id=tracking_id)
+    payload = env.model_dump(mode="json")
+    payload.update({
+        "document_id": str(doc_record.document_id),
+        "case_id": str(doc_record.case_id),
+        "status": doc_record.status.value if hasattr(doc_record.status, "value") else str(doc_record.status),
+    })
     return JSONResponse(
         status_code=status.HTTP_200_OK,
-        content={
-            "success": True,
-            "data": doc_record.model_dump(mode="json"),
-            "error": None,
-            "tracking_id": tracking_id,
-            "document_id": str(doc_record.document_id),
-            "case_id": str(doc_record.case_id),
-            "status": doc_record.status.value if hasattr(doc_record.status, "value") else str(doc_record.status),
-        },
+        content=payload,
         headers={"X-Tracking-ID": tracking_id},
     )

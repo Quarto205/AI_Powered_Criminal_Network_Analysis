@@ -109,36 +109,18 @@ class RelationshipDetailResponse(BaseModel):
     created_at: datetime
 
 
-class EvidenceDetailResponse(BaseModel):
-    """Detailed evidence record with provenance offsets and document source."""
-    model_config = ConfigDict(from_attributes=True)
-
-    evidence_id: UUID
-    case_id: UUID
-    relationship_id: Optional[UUID] = None
-    source_ref: str
-    support_type: str
-    document_id: Optional[UUID] = None
-    chunk_id: Optional[UUID] = None
-    file_name: Optional[str] = None
-    version_hash: Optional[str] = None
-    page_number: Optional[int] = None
-    character_start: Optional[int] = None
-    character_end: Optional[int] = None
-    snippet: Optional[str] = None
-    created_at: Optional[datetime] = None
-
-
 # ==============================================================================
 # 2. HUMAN REVIEW OVERRIDE SCHEMAS
 # ==============================================================================
 
 class ReviewTargetType:
+    ENTITY = "ENTITY"
+    RELATIONSHIP = "RELATIONSHIP"
     ENTITY_RESOLUTION = "ENTITY_RESOLUTION"
     PREDICTION = "PREDICTION"
     EXTRACTION = "EXTRACTION"
-    ENTITY = "ENTITY"
-    RELATIONSHIP = "RELATIONSHIP"
+
+    ALL = {ENTITY, RELATIONSHIP, ENTITY_RESOLUTION, PREDICTION, EXTRACTION}
 
 
 class ReviewAction:
@@ -149,32 +131,31 @@ class ReviewAction:
 
 class ReviewRequest(BaseModel):
     """Investigator / Supervisor override mutation request."""
-    target_id: UUID = Field(..., description="UUID of entity, prediction, extraction, or relationship")
-    target_type: str = Field(
-        ...,
-        description="ENTITY_RESOLUTION, PREDICTION, EXTRACTION, ENTITY, or RELATIONSHIP",
-    )
+    target_type: str = Field(..., description="ENTITY_RESOLUTION, PREDICTION, EXTRACTION, ENTITY, or RELATIONSHIP")
+    target_id: UUID = Field(..., description="UUID of entity or relationship to review")
     action: str = Field(..., description="CONFIRM, REJECT, or MERGE")
     secondary_target_id: Optional[UUID] = Field(
         default=None,
         description="For MERGE: the secondary entity UUID being absorbed into target_id",
     )
-    reason: Optional[str] = Field(default=None, max_length=1000, description="Investigative justification")
-    override_notes: Optional[str] = Field(default=None, max_length=1000, description="Canonical override notes per 04_API_SPEC.md")
+    override_notes: Optional[str] = Field(default=None, max_length=1000, description="Canonical review justification")
+    reason: Optional[str] = Field(default=None, max_length=1000, description="Review justification (alias for override_notes)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_reason_and_notes(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            notes = data.get("override_notes") or data.get("reason") or "Reviewed by supervisor"
+            data.setdefault("override_notes", notes)
+            data.setdefault("reason", notes)
+        return data
 
     @field_validator("target_type")
     @classmethod
     def validate_target_type(cls, v: str) -> str:
         val = v.strip().upper()
-        allowed = {
-            ReviewTargetType.ENTITY_RESOLUTION,
-            ReviewTargetType.PREDICTION,
-            ReviewTargetType.EXTRACTION,
-            ReviewTargetType.ENTITY,
-            ReviewTargetType.RELATIONSHIP,
-        }
-        if val not in allowed:
-            raise ValueError(f"Invalid target_type '{v}'. Must be one of: {sorted(list(allowed))}")
+        if val not in ReviewTargetType.ALL:
+            raise ValueError(f"Invalid target_type '{v}'. Must be one of {sorted(ReviewTargetType.ALL)}.")
         return val
 
     @field_validator("action")
@@ -185,28 +166,6 @@ class ReviewRequest(BaseModel):
             raise ValueError(f"Invalid action '{v}'. Must be CONFIRM, REJECT, or MERGE.")
         return val
 
-    @model_validator(mode="before")
-    @classmethod
-    def reconcile_justification_inputs(cls, data: Any) -> Any:
-        if isinstance(data, dict):
-            reason = data.get("reason")
-            notes = data.get("override_notes")
-            if reason and not notes:
-                data["override_notes"] = reason
-            elif notes and not reason:
-                data["reason"] = notes
-        return data
-
-    @model_validator(mode="after")
-    def validate_justification_present(self) -> "ReviewRequest":
-        if not self.reason and not self.override_notes:
-            raise ValueError("Either 'reason' or 'override_notes' must be provided as justification.")
-        if self.reason and not self.override_notes:
-            self.override_notes = self.reason
-        elif self.override_notes and not self.reason:
-            self.reason = self.override_notes
-        return self
-
 
 class ReviewResponse(BaseModel):
     """Receipt returned upon successful review override."""
@@ -214,24 +173,23 @@ class ReviewResponse(BaseModel):
     target_type: str
     target_id: UUID
     action: str
-    resulting_status: str = "REVIEWED"
-    status: Optional[str] = None
+    status: str = "REVIEWED"
+    resulting_status: str
     secondary_target_id: Optional[UUID] = None
     applied_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    reason: str = ""
+    reason: str
     override_notes: Optional[str] = None
 
-    @model_validator(mode="after")
-    def sync_fields(self) -> "ReviewResponse":
-        if not self.status and self.resulting_status:
-            self.status = self.resulting_status
-        elif not self.resulting_status and self.status:
-            self.resulting_status = self.status
-        if not self.override_notes and self.reason:
-            self.override_notes = self.reason
-        elif not self.reason and self.override_notes:
-            self.reason = self.override_notes
-        return self
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_notes(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            notes = data.get("override_notes") or data.get("reason")
+            if notes:
+                data.setdefault("override_notes", notes)
+                data.setdefault("reason", notes)
+            data.setdefault("status", "REVIEWED")
+        return data
 
 
 # ==============================================================================
@@ -327,9 +285,3 @@ class CaseAlertsResponse(BaseModel):
     case_id: UUID
     alerts: List[AlertItem] = Field(default_factory=list)
     total: int = Field(ge=0)
-
-
-class AlertFilterParams(BaseModel):
-    """Optional query filters for alerts."""
-    severity: Optional[str] = None
-    status: Optional[str] = None

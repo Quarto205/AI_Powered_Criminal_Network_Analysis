@@ -86,12 +86,11 @@ class GraphQueryService:
             limit=limit,
         )
 
-        driver = self.graph_manager.get_driver()
         raw_nodes: List[Dict[str, Any]] = []
         raw_edges: List[Dict[str, Any]] = []
 
         try:
-            with driver.session() as session:
+            with self.graph_manager.get_session(access_mode="READ") as session:
                 result = session.run(query, params)
                 record = result.single()
                 if record:

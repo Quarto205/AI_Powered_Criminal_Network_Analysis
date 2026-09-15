@@ -38,8 +38,12 @@ from backend.db.models.entities import (
     Phone,
     Relationship,
     RelationshipEvidence,
+    RelationshipEvidenceState,
     Transaction,
     Vehicle,
+    hash_identifier,
+    mask_identifier,
+    normalize_identifier,
 )
 
 # Domain D: AI, Analytics, and Audit (8 tables)
@@ -86,6 +90,10 @@ __all__ = [
     "EntityIdentifier",
     "Relationship",
     "RelationshipEvidence",
+    "RelationshipEvidenceState",
+    "normalize_identifier",
+    "hash_identifier",
+    "mask_identifier",
     "Event",
     "Communication",
     "Transaction",

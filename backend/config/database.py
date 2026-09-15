@@ -6,7 +6,10 @@ to SQLite for offline testing and development environments.
 
 import os
 from typing import Optional
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+load_dotenv()
 
 
 class DatabaseSettings(BaseModel):
@@ -21,7 +24,7 @@ class DatabaseSettings(BaseModel):
     postgres_password: str = Field(default="postgres")
     postgres_host: str = Field(default="localhost")
     postgres_port: int = Field(default=5432)
-    postgres_db: str = Field(default="sih_criminal_network")
+    postgres_db: str = Field(default="sih26189")
     echo_sql: bool = Field(default=False)
 
     @classmethod
@@ -33,7 +36,7 @@ class DatabaseSettings(BaseModel):
             postgres_password=os.getenv("POSTGRES_PASSWORD", "postgres"),
             postgres_host=os.getenv("POSTGRES_HOST", "localhost"),
             postgres_port=int(os.getenv("POSTGRES_PORT", "5432")),
-            postgres_db=os.getenv("POSTGRES_DB", "sih_criminal_network"),
+            postgres_db=os.getenv("POSTGRES_DB", "sih26189"),
             echo_sql=os.getenv("SQL_ECHO", "false").lower() in ("true", "1", "yes"),
         )
 

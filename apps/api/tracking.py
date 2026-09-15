@@ -47,15 +47,17 @@ class TrackingIdMiddleware(BaseHTTPMiddleware):
     3. Attaches 'X-Tracking-ID' header to all outgoing HTTP responses.
     """
     async def dispatch(self, request: Request, call_next) -> Response:
-        incoming = request.headers.get("X-Tracking-ID")
+        incoming = request.headers.get("X-Request-ID") or request.headers.get("X-Tracking-ID")
         tracking_id = validate_or_generate_tracking_id(incoming)
 
         # Set request state and context variable
         request.state.tracking_id = tracking_id
+        request.state.request_id = tracking_id
         token = current_tracking_id_ctx.set(tracking_id)
 
         try:
             response: Response = await call_next(request)
+            response.headers["X-Request-ID"] = tracking_id
             response.headers["X-Tracking-ID"] = tracking_id
             return response
         finally:
