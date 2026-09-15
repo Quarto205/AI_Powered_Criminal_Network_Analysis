@@ -17,22 +17,91 @@ Tables:
 23. investigation_notes
 """
 
+from enum import Enum
+import hashlib
+import re
 from datetime import datetime, timezone
 from uuid import uuid4
 from sqlalchemy import (
+    CheckConstraint,
     Column,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
     String,
     Text,
+    UniqueConstraint,
     func,
 )
 from sqlalchemy.orm import relationship
 
 from backend.db.base import Base
 from backend.db.types import AmountType, GUIDType, JSONBType
+
+
+class RelationshipEvidenceState(str, Enum):
+    """
+    Canonical relationship evidence states per 01_SHARED_TYPES.md (Section 1.4).
+    OBSERVED: Explicitly found in raw, unprocessed source files.
+    CORROBORATED: Confirmed by multiple independent source files or data categories.
+    CONFIRMED: Manually verified and locked by an investigator.
+    REJECTED: Explicitly flagged as false or untrustworthy by an investigator.
+    INFERRED: Machine-learning generated (GATv2 or heuristic link prediction).
+    """
+    OBSERVED = "OBSERVED"
+    CORROBORATED = "CORROBORATED"
+    CONFIRMED = "CONFIRMED"
+    REJECTED = "REJECTED"
+    INFERRED = "INFERRED"
+
+    # Backward-compatible alias
+    PREDICTED = "INFERRED"
+
+
+def normalize_identifier(id_type: str, raw_val: str) -> str:
+    """
+    Normalizes sensitive external identifiers (Phone, Bank Account, Vehicle Plate)
+    prior to hashing, enforcing strict canonical formats.
+    """
+    if not raw_val:
+        return ""
+    clean = raw_val.strip()
+    id_upper = id_type.strip().upper()
+    if id_upper in ("PHONE", "PHONE_NUMBER"):
+        digits = re.sub(r"\D", "", clean)
+        if clean.startswith("+"):
+            return f"+{digits}"
+        if len(digits) == 10:
+            return f"+91{digits}"
+        if len(digits) == 11 and digits.startswith("0"):
+            return f"+91{digits[1:]}"
+        return digits
+    elif id_upper in ("BANK_ACCOUNT", "BANK_ACCOUNT_NUM", "ACCOUNT"):
+        return re.sub(r"\s+", "", clean).upper()
+    elif id_upper in ("VEHICLE", "VEHICLE_PLATE"):
+        return re.sub(r"[\s\-]+", "", clean).upper()
+    elif id_upper in ("UPI", "UPI_VPA", "VPA"):
+        return re.sub(r"\s+", "", clean).lower()
+    return clean
+
+
+def hash_identifier(normalized_val: str) -> str:
+    """Computes deterministic SHA-256 hex digest of a normalized identifier."""
+    if not normalized_val:
+        return ""
+    return hashlib.sha256(normalized_val.encode("utf-8")).hexdigest()
+
+
+def mask_identifier(id_type: str, raw_val: str) -> str:
+    """Defensive masking for human-readable display of sensitive values."""
+    if not raw_val:
+        return "****"
+    clean = raw_val.strip()
+    if len(clean) <= 4:
+        return "****"
+    return f"{clean[:2]}{'*' * (len(clean) - 4)}{clean[-2:]}"
 
 
 class Entity(Base):
@@ -84,6 +153,11 @@ class EntityIdentifier(Base):
     normalized_value_hash = Column(String(64), nullable=False)
     value_policy = Column(String(100), nullable=True)
 
+    __table_args__ = (
+        UniqueConstraint("entity_id", "type", "normalized_value_hash", name="uq_entity_identifiers_entity_type_hash"),
+        Index("idx_entity_identifiers_type_hash", "type", "normalized_value_hash"),
+    )
+
     entity = relationship("Entity", back_populates="identifiers")
 
 
@@ -98,11 +172,24 @@ class Relationship(Base):
     source_entity_uuid = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="RESTRICT"), nullable=False)
     target_entity_uuid = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="RESTRICT"), nullable=False)
     type = Column(String(50), nullable=False)
-    status = Column(String(50), nullable=False, default="OBSERVED")
+    status = Column(String(50), nullable=False, default=RelationshipEvidenceState.OBSERVED.value)
+    
+    # Dempster-Shafer / Subjective Logic Fields
+    belief = Column(Float, nullable=False, default=0.0)
+    disbelief = Column(Float, nullable=False, default=0.0)
+    uncertainty = Column(Float, nullable=False, default=1.0)
+    conflict_mass = Column(Float, nullable=False, default=0.0)
+    evidence_count = Column(Integer, nullable=False, default=0)
+    relationship_confidence = Column(Float, nullable=False, default=0.0)
+    
     created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
 
     __table_args__ = (
         Index("idx_relationships_case_source_target", "case_id", "source_entity_uuid", "target_entity_uuid"),
+        CheckConstraint(
+            "status IN ('OBSERVED', 'CORROBORATED', 'CONFIRMED', 'REJECTED', 'INFERRED')",
+            name="ck_relationships_status",
+        ),
     )
 
     case = relationship("Case")

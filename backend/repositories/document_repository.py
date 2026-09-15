@@ -5,12 +5,24 @@ status transitions, and unique content hash deduplication per case.
 Conforms to 02_DATABASE_SCHEMA.md (Section 2.1 documents table) and 06_WORKFLOWS.md.
 """
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
 from typing import Any, Dict, List, Optional, Set, Tuple
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
+
+try:
+    from backend.db.models.ingestion import (
+        Document as DbDocument,
+        DocumentVersion as DbDocumentVersion,
+        DocumentChunk as DbDocumentChunk,
+    )
+except ImportError:
+    DbDocument = None  # type: ignore
+    DbDocumentVersion = None  # type: ignore
+    DbDocumentChunk = None  # type: ignore
 
 from backend.schemas.document_jobs import DocumentRecord, DocumentState
 
@@ -56,9 +68,17 @@ class DocumentChunkRecord(BaseModel):
 class DocumentRepository:
     """
     Repository for managing documents and enforcing multi-tenant case isolation.
+    Maintains an in-memory cache and persists records to PostgreSQL when a session
+    or session_factory is supplied.
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        session: Optional[Any] = None,
+        session_factory: Optional[Any] = None,
+    ):
+        self.session = session
+        self.session_factory = session_factory
         # Primary store: (case_id, document_id) -> DocumentRecord
         self._documents: Dict[Tuple[UUID, UUID], DocumentRecord] = {}
         # Case hash set: (case_id, file_hash) -> document_id (enforces unique file_hash per case)
@@ -71,6 +91,34 @@ class DocumentRepository:
         self._document_versions: Dict[UUID, List[DocumentVersionRecord]] = {}
         # Stored chunks: document_id -> List[DocumentChunkRecord]
         self._document_chunks: Dict[UUID, List[DocumentChunkRecord]] = {}
+
+    @contextmanager
+    def _session_scope(self):
+        if self.session is not None:
+            yield self.session
+            return
+        if self.session_factory is not None and DbDocument is not None:
+            factory = self.session_factory
+            if callable(factory):
+                res = factory()
+                from sqlalchemy.orm import Session as SqlAlchemySession, sessionmaker
+                if isinstance(res, sessionmaker):
+                    sess = res()
+                elif isinstance(res, SqlAlchemySession):
+                    sess = res
+                else:
+                    yield None
+                    return
+                try:
+                    yield sess
+                    sess.commit()
+                except Exception:
+                    sess.rollback()
+                    raise
+                finally:
+                    sess.close()
+                return
+        yield None
 
     def authorize_case_access(self, user_id: UUID, case_id: UUID) -> None:
         """Registers authorized membership for a user in a case."""
@@ -123,6 +171,28 @@ class DocumentRepository:
 
         self._documents[(case_id, document_id)] = record
         self._case_hashes[hash_key] = document_id
+
+        # Authoritative persistence to PostgreSQL
+        with self._session_scope() as sess:
+            if sess is not None and DbDocument is not None:
+                try:
+                    existing = sess.query(DbDocument).filter(DbDocument.document_id == document_id).first()
+                    if not existing:
+                        status_str = initial_status.value if hasattr(initial_status, "value") else str(initial_status)
+                        db_doc = DbDocument(
+                            document_id=document_id,
+                            case_id=case_id,
+                            file_type=file_type,
+                            file_hash=file_hash,
+                            storage_key=storage_key,
+                            status=status_str,
+                            created_at=now,
+                        )
+                        sess.add(db_doc)
+                        sess.flush()
+                except Exception:
+                    raise
+
         return record
 
     def get(self, document_id: UUID, case_id: UUID) -> Optional[DocumentRecord]:
@@ -130,7 +200,41 @@ class DocumentRepository:
         Retrieves a document strictly bounded by case_id.
         Returns None if not found in that case (enforcing case isolation).
         """
-        return self._documents.get((case_id, document_id))
+        doc = self._documents.get((case_id, document_id))
+        if doc is not None:
+            return doc
+
+        with self._session_scope() as sess:
+            if sess is not None and DbDocument is not None:
+                try:
+                    db_doc = sess.query(DbDocument).filter(
+                        DbDocument.document_id == document_id,
+                        DbDocument.case_id == case_id
+                    ).first()
+                    if db_doc:
+                        try:
+                            st = DocumentState(db_doc.status)
+                        except (ValueError, KeyError):
+                            st = DocumentState.RECEIVED
+                        filename = db_doc.storage_key.split("/")[-1] if db_doc.storage_key else "document"
+                        rec = DocumentRecord(
+                            document_id=db_doc.document_id,
+                            case_id=db_doc.case_id,
+                            filename=filename,
+                            file_type=db_doc.file_type,
+                            file_hash=db_doc.file_hash,
+                            storage_key=db_doc.storage_key,
+                            status=st,
+                            created_at=db_doc.created_at or datetime.now(timezone.utc),
+                            updated_at=db_doc.created_at or datetime.now(timezone.utc),
+                        )
+                        self._documents[(case_id, document_id)] = rec
+                        self._case_hashes[(case_id, db_doc.file_hash)] = document_id
+                        return rec
+                except Exception:
+                    raise
+
+        return None
 
     def get_or_raise(self, document_id: UUID, case_id: UUID) -> DocumentRecord:
         """Retrieves a document strictly bounded by case_id or raises DocumentNotFoundError."""
@@ -152,19 +256,36 @@ class DocumentRepository:
         Strictly verifies case boundaries.
         """
         key = (case_id, document_id)
-        if key not in self._documents:
+        doc = self.get(document_id, case_id)
+        if not doc:
             raise DocumentNotFoundError(f"Cannot update status: document {document_id} not found in case {case_id}.")
 
         record = self._documents[key]
+        now = datetime.now(timezone.utc)
         updated = record.model_copy(
             update={
                 "status": status,
                 "error_message": error_message,
                 "extraction_job_id": extraction_job_id or record.extraction_job_id,
-                "updated_at": datetime.now(timezone.utc),
+                "updated_at": now,
             }
         )
         self._documents[key] = updated
+
+        with self._session_scope() as sess:
+            if sess is not None and DbDocument is not None:
+                try:
+                    db_doc = sess.query(DbDocument).filter(
+                        DbDocument.document_id == document_id,
+                        DbDocument.case_id == case_id
+                    ).first()
+                    if db_doc:
+                        status_str = status.value if hasattr(status, "value") else str(status)
+                        db_doc.status = status_str
+                        sess.flush()
+                except Exception:
+                    raise
+
         return updated
 
     def save_extraction_result(self, document_id: UUID, result_dict: Dict) -> None:
@@ -194,12 +315,55 @@ class DocumentRepository:
         if document_id not in self._document_versions:
             self._document_versions[document_id] = []
         self._document_versions[document_id].append(version)
+
+        with self._session_scope() as sess:
+            if sess is not None and DbDocumentVersion is not None:
+                try:
+                    db_ver = DbDocumentVersion(
+                        version_id=version.version_id,
+                        document_id=document_id,
+                        version_hash=version_hash,
+                        meta=metadata or {},
+                        created_at=version.created_at,
+                    )
+                    sess.add(db_ver)
+                    sess.flush()
+                except Exception:
+                    raise
+
         return version
 
     def get_latest_version(self, document_id: UUID) -> Optional[DocumentVersionRecord]:
         """Retrieves the most recent version record for a document."""
         versions = self._document_versions.get(document_id, [])
-        return versions[-1] if versions else None
+        if versions:
+            return versions[-1]
+
+        with self._session_scope() as sess:
+            if sess is not None and DbDocumentVersion is not None:
+                try:
+                    db_ver = (
+                        sess.query(DbDocumentVersion)
+                        .filter(DbDocumentVersion.document_id == document_id)
+                        .order_by(DbDocumentVersion.created_at.desc())
+                        .first()
+                    )
+                    if db_ver:
+                        ver = DocumentVersionRecord(
+                            version_id=db_ver.version_id,
+                            document_id=db_ver.document_id,
+                            version_hash=db_ver.version_hash,
+                            metadata=db_ver.meta or {},
+                            created_at=db_ver.created_at or datetime.now(timezone.utc),
+                        )
+                        if document_id not in self._document_versions:
+                            self._document_versions[document_id] = []
+                        self._document_versions[document_id].append(ver)
+                        return ver
+                except Exception:
+                    raise
+
+        return None
 
     def create_chunk(
         self,
@@ -222,12 +386,60 @@ class DocumentRepository:
         if document_id not in self._document_chunks:
             self._document_chunks[document_id] = []
         self._document_chunks[document_id].append(chunk)
+
+        with self._session_scope() as sess:
+            if sess is not None and DbDocumentChunk is not None:
+                try:
+                    db_chunk = DbDocumentChunk(
+                        chunk_id=chunk.chunk_id,
+                        version_id=version_id,
+                        page_number=page_number,
+                        character_span=character_span,
+                        text_hash=text_hash,
+                        storage_ref=storage_ref,
+                    )
+                    sess.add(db_chunk)
+                    sess.flush()
+                except Exception:
+                    raise
+
         return chunk
 
     def list_chunks(self, document_id: UUID) -> List[DocumentChunkRecord]:
         """Lists chunks for a document ordered deterministically by page_number, then chunk_id."""
         chunks = self._document_chunks.get(document_id, [])
-        return sorted(chunks, key=lambda c: (c.page_number or 0, str(c.chunk_id)))
+        if chunks:
+            return sorted(chunks, key=lambda c: (c.page_number or 0, str(c.chunk_id)))
+
+        with self._session_scope() as sess:
+            if sess is not None and DbDocumentChunk is not None and DbDocumentVersion is not None:
+                try:
+                    db_chunks = (
+                        sess.query(DbDocumentChunk)
+                        .join(DbDocumentVersion, DbDocumentChunk.version_id == DbDocumentVersion.version_id)
+                        .filter(DbDocumentVersion.document_id == document_id)
+                        .order_by(DbDocumentChunk.page_number.asc(), DbDocumentChunk.chunk_id.asc())
+                        .all()
+                    )
+                    if db_chunks:
+                        recs = [
+                            DocumentChunkRecord(
+                                chunk_id=c.chunk_id,
+                                version_id=c.version_id,
+                                document_id=document_id,
+                                page_number=c.page_number,
+                                character_span=c.character_span,
+                                text_hash=c.text_hash,
+                                storage_ref=c.storage_ref,
+                            )
+                            for c in db_chunks
+                        ]
+                        self._document_chunks[document_id] = recs
+                        return recs
+                except Exception:
+                    raise
+
+        return []
 
     def get_chunk_count(self, document_id: UUID) -> int:
         """Returns total number of chunks created for a document."""

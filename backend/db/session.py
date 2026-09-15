@@ -69,6 +69,11 @@ def get_session_factory(engine: Optional[Engine] = None) -> sessionmaker:
     return _session_factory
 
 
+def SessionLocal() -> Session:
+    """Returns a newly opened database session using the default session factory."""
+    return get_session_factory()()
+
+
 def get_db() -> Generator[Session, None, None]:
     """
     FastAPI dependency yielding an isolated transactional database session.

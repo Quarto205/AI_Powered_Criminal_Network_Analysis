@@ -22,7 +22,7 @@ from backend.config.security import SecuritySettings, set_security_settings
 from backend.db.base import Base
 from backend.db.models.identity import Case, CaseMember, Role, User, UserRole
 from backend.db.models.ingestion import Document
-from backend.db.session import get_db
+from backend.db.session import get_db, get_engine, get_session_factory
 from backend.security.rbac import Permissions, SystemRoles
 from backend.security.tokens import create_access_token
 
@@ -56,6 +56,18 @@ def setup_ingestion_test_environment():
     Base.metadata.create_all(ingestion_test_engine)
     app.dependency_overrides[get_db] = override_ingestion_get_db
 
+    from backend.repositories.document_repository import DocumentRepository
+    from backend.services.document_service import DocumentService
+    from apps.api.routers.documents import get_worker_bridge
+    test_repo = DocumentRepository(session_factory=IngestionTestingSessionLocal)
+    test_service = DocumentService(
+        repository=test_repo,
+        storage=get_storage(),
+        worker_bridge=get_worker_bridge(),
+    )
+    app.dependency_overrides[get_repository] = lambda: test_repo
+    app.dependency_overrides[get_document_service] = lambda: test_service
+
     # Seed roles in test DB
     session = IngestionTestingSessionLocal()
     for role_name in [SystemRoles.INVESTIGATOR, SystemRoles.ANALYST, SystemRoles.SUPERVISOR]:
@@ -68,6 +80,8 @@ def setup_ingestion_test_environment():
     yield
 
     app.dependency_overrides.pop(get_db, None)
+    app.dependency_overrides.pop(get_repository, None)
+    app.dependency_overrides.pop(get_document_service, None)
     Base.metadata.drop_all(ingestion_test_engine)
 
 
@@ -209,7 +223,8 @@ class TestMagicBytesAndValidation:
     def test_oversized_payload_rejected(self, client, auth_headers):
         headers, case_id, _ = auth_headers
         # Set max_file_size to 1KB to test limit enforcement safely without allocating 50MB
-        doc_service = get_document_service()
+        service_override = app.dependency_overrides.get(get_document_service)
+        doc_service = service_override() if service_override else get_document_service()
         orig_max = doc_service.max_file_size
         doc_service.max_file_size = 1024
 

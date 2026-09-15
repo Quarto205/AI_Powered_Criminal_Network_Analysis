@@ -37,8 +37,8 @@ def upgrade() -> None:
         sa.Column('username', sa.String(length=100), nullable=False),
         sa.Column('password_hash', sa.String(length=255), nullable=False),
         sa.Column('account_status', sa.String(length=50), nullable=False, server_default='ACTIVE'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=True),
         sa.PrimaryKeyConstraint('user_id', name=op.f('pk_users')),
     )
     op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
@@ -48,7 +48,7 @@ def upgrade() -> None:
         'roles',
         sa.Column('role_id', sa.Uuid(), nullable=False),
         sa.Column('name', sa.String(length=100), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint('role_id', name=op.f('pk_roles')),
     )
     op.create_index(op.f('ix_roles_name'), 'roles', ['name'], unique=True)
@@ -80,7 +80,7 @@ def upgrade() -> None:
         sa.Column('status', sa.String(length=50), nullable=False, server_default='ACTIVE'),
         sa.Column('jurisdiction', sa.String(length=100), nullable=False),
         sa.Column('created_by', sa.Uuid(), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(['created_by'], ['users.user_id'], name=op.f('fk_cases_created_by_users'), ondelete='RESTRICT'),
         sa.PrimaryKeyConstraint('case_id', name=op.f('pk_cases')),
     )
@@ -110,7 +110,7 @@ def upgrade() -> None:
         sa.Column('file_hash', sa.String(length=64), nullable=False),
         sa.Column('storage_key', sa.String(length=512), nullable=False),
         sa.Column('status', sa.String(length=50), nullable=False, server_default='RECEIVED'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(['case_id'], ['cases.case_id'], name=op.f('fk_documents_case_id_cases'), ondelete='RESTRICT'),
         sa.PrimaryKeyConstraint('document_id', name=op.f('pk_documents')),
         sa.UniqueConstraint('case_id', 'file_hash', name='uq_documents_case_hash'),
@@ -124,7 +124,7 @@ def upgrade() -> None:
         sa.Column('document_id', sa.Uuid(), nullable=False),
         sa.Column('version_hash', sa.String(length=64), nullable=False),
         sa.Column('metadata', postgresql.JSONB(astext_type=sa.Text()).with_variant(sa.JSON(), 'sqlite'), nullable=True),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(['document_id'], ['documents.document_id'], name=op.f('fk_document_versions_document_id_documents'), ondelete='RESTRICT'),
         sa.PrimaryKeyConstraint('version_id', name=op.f('pk_document_versions')),
     )
@@ -153,7 +153,7 @@ def upgrade() -> None:
         sa.Column('entity_type', sa.String(length=50), nullable=False),
         sa.Column('canonical_name', sa.String(length=255), nullable=False),
         sa.Column('status', sa.String(length=50), nullable=False, server_default='ACTIVE'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(['case_id'], ['cases.case_id'], name=op.f('fk_entities_case_id_cases'), ondelete='RESTRICT'),
         sa.PrimaryKeyConstraint('entity_id', name=op.f('pk_entities')),
     )
@@ -190,7 +190,7 @@ def upgrade() -> None:
         sa.Column('target_entity_uuid', sa.Uuid(), nullable=False),
         sa.Column('type', sa.String(length=50), nullable=False),
         sa.Column('status', sa.String(length=50), nullable=False, server_default='OBSERVED'),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(['case_id'], ['cases.case_id'], name=op.f('fk_relationships_case_id_cases'), ondelete='RESTRICT'),
         sa.ForeignKeyConstraint(['source_entity_uuid'], ['entities.entity_id'], name=op.f('fk_relationships_source_entity_uuid_entities'), ondelete='RESTRICT'),
         sa.ForeignKeyConstraint(['target_entity_uuid'], ['entities.entity_id'], name=op.f('fk_relationships_target_entity_uuid_entities'), ondelete='RESTRICT'),
@@ -321,7 +321,7 @@ def upgrade() -> None:
         sa.Column('task_type', sa.String(length=100), nullable=False),
         sa.Column('input_snapshot_checksum', sa.String(length=64), nullable=False),
         sa.Column('status', sa.String(length=50), server_default='COMPLETED', nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.PrimaryKeyConstraint('run_id', name=op.f('pk_model_runs')),
     )
 
@@ -378,7 +378,7 @@ def upgrade() -> None:
         sa.Column('case_id', sa.Uuid(), nullable=False),
         sa.Column('source_migration_version', sa.String(length=100), nullable=False),
         sa.Column('checksum', sa.String(length=64), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(['case_id'], ['cases.case_id'], name=op.f('fk_graph_snapshots_case_id_cases'), ondelete='CASCADE'),
         sa.PrimaryKeyConstraint('snapshot_id', name=op.f('pk_graph_snapshots')),
     )
@@ -391,7 +391,7 @@ def upgrade() -> None:
         sa.Column('action_code', sa.String(length=100), nullable=False),
         sa.Column('case_id', sa.Uuid(), nullable=True),
         sa.Column('target_item', sa.String(length=255), nullable=True),
-        sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('timestamp', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column('outcome', sa.String(length=50), nullable=False),
         sa.ForeignKeyConstraint(['actor_uuid'], ['users.user_id'], name=op.f('fk_audit_logs_actor_uuid_users'), ondelete='RESTRICT'),
         sa.ForeignKeyConstraint(['case_id'], ['cases.case_id'], name=op.f('fk_audit_logs_case_id_cases'), ondelete='RESTRICT'),
@@ -419,7 +419,7 @@ def upgrade() -> None:
         sa.Column('user_uuid', sa.Uuid(), nullable=False),
         sa.Column('artifact_ref', sa.String(length=512), nullable=False),
         sa.Column('version_hash', sa.String(length=64), nullable=False),
-        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.ForeignKeyConstraint(['case_id'], ['cases.case_id'], name=op.f('fk_exports_case_id_cases'), ondelete='CASCADE'),
         sa.ForeignKeyConstraint(['user_uuid'], ['users.user_id'], name=op.f('fk_exports_user_uuid_users'), ondelete='RESTRICT'),
         sa.PrimaryKeyConstraint('export_id', name=op.f('pk_exports')),

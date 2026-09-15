@@ -1,3 +1,4 @@
+from backend.db.session import get_db, get_engine, get_session_factory
 """
 Comprehensive PostgreSQL Relational Schema & Invariants Test Suite for SIH26189.
 Verifies:

@@ -7,7 +7,7 @@ Enforces non-accusatory terminology: Priority Ranking, Risk Score, Investigative
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 # ==============================================================================
@@ -116,6 +116,11 @@ class RelationshipDetailResponse(BaseModel):
 class ReviewTargetType:
     ENTITY = "ENTITY"
     RELATIONSHIP = "RELATIONSHIP"
+    ENTITY_RESOLUTION = "ENTITY_RESOLUTION"
+    PREDICTION = "PREDICTION"
+    EXTRACTION = "EXTRACTION"
+
+    ALL = {ENTITY, RELATIONSHIP, ENTITY_RESOLUTION, PREDICTION, EXTRACTION}
 
 
 class ReviewAction:
@@ -126,21 +131,31 @@ class ReviewAction:
 
 class ReviewRequest(BaseModel):
     """Investigator / Supervisor override mutation request."""
-    target_type: str = Field(..., description="ENTITY or RELATIONSHIP")
+    target_type: str = Field(..., description="ENTITY_RESOLUTION, PREDICTION, EXTRACTION, ENTITY, or RELATIONSHIP")
     target_id: UUID = Field(..., description="UUID of entity or relationship to review")
     action: str = Field(..., description="CONFIRM, REJECT, or MERGE")
     secondary_target_id: Optional[UUID] = Field(
         default=None,
         description="For MERGE: the secondary entity UUID being absorbed into target_id",
     )
-    reason: str = Field(..., min_length=3, max_length=1000, description="Mandatory investigative justification")
+    override_notes: Optional[str] = Field(default=None, max_length=1000, description="Canonical review justification")
+    reason: Optional[str] = Field(default=None, max_length=1000, description="Review justification (alias for override_notes)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_reason_and_notes(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            notes = data.get("override_notes") or data.get("reason") or "Reviewed by supervisor"
+            data.setdefault("override_notes", notes)
+            data.setdefault("reason", notes)
+        return data
 
     @field_validator("target_type")
     @classmethod
     def validate_target_type(cls, v: str) -> str:
         val = v.strip().upper()
-        if val not in (ReviewTargetType.ENTITY, ReviewTargetType.RELATIONSHIP):
-            raise ValueError(f"Invalid target_type '{v}'. Must be ENTITY or RELATIONSHIP.")
+        if val not in ReviewTargetType.ALL:
+            raise ValueError(f"Invalid target_type '{v}'. Must be one of {sorted(ReviewTargetType.ALL)}.")
         return val
 
     @field_validator("action")
@@ -158,10 +173,23 @@ class ReviewResponse(BaseModel):
     target_type: str
     target_id: UUID
     action: str
+    status: str = "REVIEWED"
     resulting_status: str
     secondary_target_id: Optional[UUID] = None
     applied_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     reason: str
+    override_notes: Optional[str] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_notes(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            notes = data.get("override_notes") or data.get("reason")
+            if notes:
+                data.setdefault("override_notes", notes)
+                data.setdefault("reason", notes)
+            data.setdefault("status", "REVIEWED")
+        return data
 
 
 # ==============================================================================

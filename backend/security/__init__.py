@@ -21,6 +21,11 @@ from backend.security.rbac import (
     has_permission,
 )
 from backend.security.audit import SecurityAuditAction, record_security_event
+from backend.security.redaction import (
+    SensitiveDataFilter,
+    apply_logging_redaction,
+    redact_sensitive_text,
+)
 
 __all__ = [
     "hash_password",
@@ -41,4 +46,7 @@ __all__ = [
     "has_permission",
     "SecurityAuditAction",
     "record_security_event",
+    "SensitiveDataFilter",
+    "redact_sensitive_text",
+    "apply_logging_redaction",
 ]

@@ -24,6 +24,15 @@ class SecurityAuditAction:
     GRAPH_REBUILD = "GRAPH_REBUILD"
     REVIEW_OVERRIDE = "REVIEW_OVERRIDE"
     ANALYSIS_TRIGGER = "ANALYSIS_TRIGGER"
+    ER_DETERMINISTIC_MATCH = "ER_DETERMINISTIC_MATCH"
+    ER_HEURISTIC_MATCH = "ER_HEURISTIC_MATCH"
+    ER_AUTO_MERGE = "ER_AUTO_MERGE"
+    ER_REVIEW_REQUIRED = "ER_REVIEW_REQUIRED"
+    ER_NEW_ENTITY_CREATED = "ER_NEW_ENTITY_CREATED"
+    ER_COLLISION = "ER_COLLISION"
+    ER_REJECTED = "ER_REJECTED"
+    ER_REVERSED_MERGE = "ER_REVERSED_MERGE"
+    ER_FAILURE = "ER_FAILURE"
 
 
 def record_security_event(
@@ -61,12 +70,26 @@ def record_security_event(
     if actor_uuid is None:
         return None
 
+    # Database audit_logs table has an FK constraint on case_id (cases.case_id).
+    # If case_id is provided but does not exist in cases table (e.g. random non-existent case target),
+    # store case_id as NULL to respect referential integrity while capturing the attempted target in target_item.
+    effective_case_id = case_id
+    if case_id is not None:
+        from backend.db.models.identity import Case
+        case_exists = db.query(Case.case_id).filter(Case.case_id == case_id).first() is not None
+        if not case_exists:
+            effective_case_id = None
+            if not sanitized_target:
+                sanitized_target = f"NONEXISTENT_CASE:{case_id}"[:255]
+            elif str(case_id) not in sanitized_target:
+                sanitized_target = f"{sanitized_target} (target_case:{case_id})"[:255]
+
     try:
         log_entry = AuditLog(
             audit_id=uuid4(),
             actor_uuid=actor_uuid,
             action_code=action_code,
-            case_id=case_id,
+            case_id=effective_case_id,
             target_item=sanitized_target,
             timestamp=timestamp,
             outcome=outcome,

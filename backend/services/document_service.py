@@ -80,7 +80,7 @@ class DocumentService:
         # 1. Enforce file size limit
         if len(data) > self.max_file_size:
             raise HTTPException(
-                status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
                 detail=f"Document payload exceeds maximum allowed size of {self.max_file_size // (1024 * 1024)}MB.",
             )
 
@@ -167,16 +167,22 @@ class DocumentService:
 
         # 9. Persist in SQLAlchemy DB if available
         if db is not None:
-            db_doc = Document(
-                document_id=document_id,
-                case_id=case_id,
-                file_type=detected_mime,
-                file_hash=file_hash,
-                storage_key=storage_key,
-                status=DocumentState.RECEIVED.value,
+            existing_db_doc = (
+                db.query(Document)
+                .filter(Document.document_id == document_id)
+                .first()
             )
-            db.add(db_doc)
-            db.flush()
+            if not existing_db_doc:
+                db_doc = Document(
+                    document_id=document_id,
+                    case_id=case_id,
+                    file_type=detected_mime,
+                    file_hash=file_hash,
+                    storage_key=storage_key,
+                    status=DocumentState.RECEIVED.value,
+                )
+                db.add(db_doc)
+                db.flush()
 
         # 10. Dispatch asynchronous worker job
         caller_uuid = user.user_id if user else None

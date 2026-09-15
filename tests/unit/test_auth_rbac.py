@@ -1,3 +1,4 @@
+from backend.db.session import get_db, get_engine, get_session_factory
 """
 Unit Test Suite for Authentication, Password Hashing, JWT Tokens, RBAC, and Security Audit.
 Verifies security invariants in 07_AUTH_SECURITY.md and 04_API_SPEC.md.

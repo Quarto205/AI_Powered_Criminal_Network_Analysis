@@ -65,6 +65,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
     error_body["detail"] = message
 
     headers = dict(exc.headers) if exc.headers else {}
+    headers["X-Request-ID"] = tracking_id
     headers["X-Tracking-ID"] = tracking_id
 
     return JSONResponse(
@@ -100,7 +101,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     return JSONResponse(
         status_code=422,
         content=error_body,
-        headers={"X-Tracking-ID": tracking_id},
+        headers={"X-Request-ID": tracking_id, "X-Tracking-ID": tracking_id},
     )
 
 
@@ -124,7 +125,7 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
     return JSONResponse(
         status_code=409,
         content=error_body,
-        headers={"X-Tracking-ID": tracking_id},
+        headers={"X-Request-ID": tracking_id, "X-Tracking-ID": tracking_id},
     )
 
 
@@ -149,7 +150,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     return JSONResponse(
         status_code=500,
         content=error_body,
-        headers={"X-Tracking-ID": tracking_id},
+        headers={"X-Request-ID": tracking_id, "X-Tracking-ID": tracking_id},
     )
 
 

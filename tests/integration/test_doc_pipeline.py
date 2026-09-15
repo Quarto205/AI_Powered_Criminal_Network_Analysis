@@ -1015,14 +1015,7 @@ class TestDocumentAPIIntegration:
         background task execution to EXTRACTED, and GET retrieval.
         """
         from fastapi.testclient import TestClient
-        try:
-            from apps.api.main import app
-            from apps.api.routers.documents import get_repository, get_worker
-            repo = get_repository()
-            worker = get_worker()
-        except (ImportError, ModuleNotFoundError):
-            app, repo, worker = _build_standalone_test_app()
-
+        app, repo, worker = _build_standalone_test_app()
         client = TestClient(app)
 
         case_id = uuid4()
@@ -1093,13 +1086,7 @@ class TestDocumentAPIIntegration:
         unique file_hash within a case_id prevents double-uploading.
         """
         from fastapi.testclient import TestClient
-        try:
-            from apps.api.main import app
-            from apps.api.routers.documents import get_repository
-            repo = get_repository()
-        except (ImportError, ModuleNotFoundError):
-            app, repo, _ = _build_standalone_test_app()
-
+        app, repo, _ = _build_standalone_test_app()
         client = TestClient(app)
         case_id = uuid4()
         user_id = uuid4()

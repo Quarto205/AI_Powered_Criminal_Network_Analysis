@@ -10,7 +10,7 @@ and safe Neo4j outage handling.
 
 import asyncio
 import logging
-from typing import List, Optional
+from typing import Any, List, Optional
 from uuid import UUID, uuid4
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from sqlalchemy.orm import Session

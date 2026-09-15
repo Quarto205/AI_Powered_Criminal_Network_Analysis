@@ -170,12 +170,15 @@ class CaseAccessChecker:
 
         # 2. Non-member: Return 404 Not Found and audit CASE_ACCESS_DENIED
         if not membership:
+            from backend.db.models.identity import Case
+            case_exists = db.query(Case.case_id).filter(Case.case_id == case_id).first() is not None
+            audit_case_id = case_id if case_exists else None
             record_security_event(
                 db=db,
                 action_code=SecurityAuditAction.CASE_ACCESS_DENIED,
                 actor_uuid=user.user_id,
-                case_id=case_id,
-                target_item="CASE_ACCESS",
+                case_id=audit_case_id,
+                target_item="CASE_ACCESS" if case_exists else f"CASE:{case_id}",
                 outcome="DENIED",
             )
             raise HTTPException(

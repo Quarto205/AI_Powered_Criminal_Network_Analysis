@@ -1,3 +1,4 @@
+from backend.db.session import get_db, get_engine, get_session_factory
 """
 Unit Tests for Evidence Detail, Provenance Spans, and Human Review Overrides.
 Validates:
@@ -33,9 +34,22 @@ from backend.db.models.entities import (
 from backend.db.models.analytics import AuditLog, RiskScore
 from backend.graph.connection import set_graph_manager
 from backend.graph.mock_driver import MockNeo4jConnectionManager
+from backend.config.security import SecuritySettings, set_security_settings
 from backend.security.password import hash_password
 from backend.security.rbac import SystemRoles
 from backend.security.tokens import create_access_token
+
+
+@pytest.fixture(autouse=True)
+def configure_test_security_settings():
+    test_settings = SecuritySettings(
+        jwt_secret_key="evidence-review-test-deterministic-jwt-secret-key-32b!",
+        jwt_algorithm="HS256",
+        jwt_access_token_expire_seconds=28800,
+    )
+    set_security_settings(test_settings)
+    yield
+    set_security_settings(None)
 
 
 @pytest.fixture

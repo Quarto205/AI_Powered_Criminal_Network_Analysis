@@ -8,6 +8,9 @@ from fastapi import FastAPI
 from apps.api.errors import register_exception_handlers
 from apps.api.routers.v1 import v1_router
 from apps.api.tracking import TrackingIdMiddleware
+from backend.security.redaction import apply_logging_redaction
+
+apply_logging_redaction()
 
 app = FastAPI(
     title="SIH26189 Criminal Network Analysis API",

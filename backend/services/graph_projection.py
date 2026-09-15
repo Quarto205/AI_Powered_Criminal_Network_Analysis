@@ -88,8 +88,7 @@ class GraphProjectionService:
 
         logger.info(f"Initiating full graph rebuild for case {case_id}")
 
-        driver = self.graph_manager.get_driver()
-        with driver.session() as session:
+        with self.graph_manager.get_session() as session:
             # Step 1: Case-scoped purge
             purge_query, purge_params = CypherBuilder.build_case_purge(case_id)
             session.run(purge_query, purge_params)
@@ -254,8 +253,7 @@ class GraphProjectionService:
             status=entity.status,
             created_at=entity.created_at.isoformat() if entity.created_at else datetime.now(timezone.utc).isoformat(),
         )
-        driver = self.graph_manager.get_driver()
-        with driver.session() as session:
+        with self.graph_manager.get_session() as session:
             session.run(query, params)
 
     def upsert_relationship(
@@ -282,6 +280,5 @@ class GraphProjectionService:
             provenance_count=provenance_count,
             created_at=relationship.created_at.isoformat() if relationship.created_at else datetime.now(timezone.utc).isoformat(),
         )
-        driver = self.graph_manager.get_driver()
-        with driver.session() as session:
+        with self.graph_manager.get_session() as session:
             session.run(query, params)

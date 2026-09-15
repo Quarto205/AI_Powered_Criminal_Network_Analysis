@@ -10,7 +10,7 @@ Every JSON response exposes:
 
 from typing import Any, Dict, Generic, Optional, TypeVar
 from uuid import uuid4
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 T = TypeVar("T")
 
@@ -37,7 +37,17 @@ class ApiSuccessResponse(BaseModel, Generic[T]):
     success: bool = Field(default=True, description="Always true for successful operations")
     data: T = Field(..., description="Primary response payload")
     error: Optional[ApiErrorDetail] = Field(default=None, description="Always null on success")
-    tracking_id: str = Field(..., description="Request correlation UUID-v4")
+    request_id: str = Field(default="", description="Canonical request correlation UUID-v4")
+    tracking_id: str = Field(default="", description="Request correlation UUID-v4 (backward-compatible alias)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_ids(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            req_id = data.get("request_id") or data.get("tracking_id") or str(uuid4())
+            data.setdefault("request_id", req_id)
+            data.setdefault("tracking_id", req_id)
+        return data
 
 
 class ApiErrorResponse(BaseModel):
@@ -45,16 +55,32 @@ class ApiErrorResponse(BaseModel):
     success: bool = Field(default=False, description="Always false for error responses")
     data: Optional[Any] = Field(default=None, description="Always null on error")
     error: ApiErrorDetail = Field(..., description="Structured error details")
-    tracking_id: str = Field(..., description="Request correlation UUID-v4")
+    request_id: str = Field(default="", description="Canonical request correlation UUID-v4")
+    tracking_id: str = Field(default="", description="Request correlation UUID-v4 (backward-compatible alias)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_ids(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            req_id = data.get("request_id") or data.get("tracking_id") or str(uuid4())
+            data.setdefault("request_id", req_id)
+            data.setdefault("tracking_id", req_id)
+        return data
 
 
-def envelope_success(data: T, tracking_id: Optional[str] = None) -> ApiSuccessResponse[T]:
+def envelope_success(
+    data: T,
+    tracking_id: Optional[str] = None,
+    request_id: Optional[str] = None,
+) -> ApiSuccessResponse[T]:
     """Helper to construct a typed success envelope."""
+    cid = request_id or tracking_id or str(uuid4())
     return ApiSuccessResponse[T](
         success=True,
         data=data,
         error=None,
-        tracking_id=tracking_id or str(uuid4()),
+        request_id=cid,
+        tracking_id=cid,
     )
 
 
@@ -63,8 +89,10 @@ def envelope_error(
     message: str,
     details: Optional[Dict[str, Any]] = None,
     tracking_id: Optional[str] = None,
+    request_id: Optional[str] = None,
 ) -> ApiErrorResponse:
     """Helper to construct an error envelope."""
+    cid = request_id or tracking_id or str(uuid4())
     return ApiErrorResponse(
         success=False,
         data=None,
@@ -73,5 +101,6 @@ def envelope_error(
             message=message,
             details=details or {},
         ),
-        tracking_id=tracking_id or str(uuid4()),
+        request_id=cid,
+        tracking_id=cid,
     )

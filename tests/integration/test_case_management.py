@@ -24,7 +24,7 @@ from backend.db.models.analytics import AuditLog
 from backend.db.models.identity import Case, CaseMember, Role, User, UserRole
 from backend.db.models.ingestion import Document
 from backend.db.models.entities import Entity
-from backend.db.session import get_db
+from backend.db.session import get_db, get_engine, get_session_factory
 from backend.schemas.envelope import ErrorCodes
 from backend.security.password import hash_password
 from backend.security.rbac import Permissions, SystemRoles

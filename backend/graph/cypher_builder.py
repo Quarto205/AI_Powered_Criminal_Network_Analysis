@@ -80,12 +80,15 @@ ENTITY_MERGE_CYPHER_TEMPLATES: Dict[str, str] = {
     label: (
         f"MERGE (n:Entity:{label} {{id: $entity_id, case_id: $case_id}}) "
         "ON CREATE SET "
+        "  n.entity_id = $entity_id, "
         "  n.canonical_name = $canonical_name, "
+        "  n.display_name = $canonical_name, "
         "  n.entity_type = $entity_type, "
         "  n.status = $status, "
         "  n.created_at = $created_at "
         "ON MATCH SET "
         "  n.canonical_name = $canonical_name, "
+        "  n.display_name = $canonical_name, "
         "  n.status = $status"
     )
     for label in CANONICAL_ENTITY_LABELS.values()
@@ -99,16 +102,20 @@ RELATIONSHIP_MERGE_CYPHER_TEMPLATES: Dict[str, str] = {
         "MATCH (tgt:Entity {id: $target_id, case_id: $case_id}) "
         f"MERGE (src)-[r:{rel_type} {{id: $relationship_id, case_id: $case_id}}]->(tgt) "
         "ON CREATE SET "
+        "  r.relationship_id = $relationship_id, "
         "  r.type = $rel_type, "
         "  r.status = $status, "
         "  r.confidence_score = $confidence_score, "
         "  r.is_predicted = $is_predicted, "
         "  r.provenance_count = $provenance_count, "
+        "  r.source_ref_count = $provenance_count, "
+        "  r.observed_at = $created_at, "
         "  r.created_at = $created_at "
         "ON MATCH SET "
         "  r.status = $status, "
         "  r.confidence_score = $confidence_score, "
-        "  r.provenance_count = $provenance_count"
+        "  r.provenance_count = $provenance_count, "
+        "  r.source_ref_count = $provenance_count"
     )
     for rel_type in CANONICAL_RELATIONSHIP_TYPES
 }

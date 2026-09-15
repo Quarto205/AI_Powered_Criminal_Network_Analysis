@@ -71,6 +71,17 @@ def register_orm_immutability_listener(model_class: Type) -> None:
     """
     @event.listens_for(model_class, "before_update")
     def _block_update(mapper: Mapper, connection, target):
+        if model_class.__tablename__ == "documents":
+            from sqlalchemy import inspect
+            state = inspect(target)
+            for attr in state.attrs:
+                if attr.history.has_changes() and attr.key != "status":
+                    raise ImmutableRecordError(
+                        f"UPDATE operation is strictly forbidden on immutable entity 'documents'. "
+                        f"Source records and audit trails are append-only."
+                    )
+            return
+        
         raise ImmutableRecordError(
             f"UPDATE operation is strictly forbidden on immutable entity '{model_class.__tablename__}'. "
             f"Source records and audit trails are append-only."
