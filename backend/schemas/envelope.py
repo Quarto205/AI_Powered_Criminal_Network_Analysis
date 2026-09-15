@@ -67,6 +67,8 @@ class ApiErrorResponse(BaseModel):
             data.setdefault("tracking_id", req_id)
         return data
 
+# Canonical generic alias per task specification
+ApiResponse = ApiSuccessResponse
 
 def envelope_success(
     data: T,
