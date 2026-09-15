@@ -187,7 +187,7 @@ class Relationship(Base):
     __table_args__ = (
         Index("idx_relationships_case_source_target", "case_id", "source_entity_uuid", "target_entity_uuid"),
         CheckConstraint(
-            "status IN ('OBSERVED', 'CORROBORATED', 'CONFIRMED', 'REJECTED', 'INFERRED')",
+            "status IN ('OBSERVED', 'CORROBORATED', 'CONFIRMED', 'REJECTED', 'INFERRED', 'MERGED_SELF_LOOP')",
             name="ck_relationships_status",
         ),
     )
