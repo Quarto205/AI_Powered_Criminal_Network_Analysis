@@ -285,3 +285,122 @@ class CaseAlertsResponse(BaseModel):
     case_id: UUID
     alerts: List[AlertItem] = Field(default_factory=list)
     total: int = Field(ge=0)
+
+
+# ==============================================================================
+# 3. ANALYSIS & INTELLIGENCE SCHEMAS
+# ==============================================================================
+
+
+class AnalysisPipelines:
+    SNA = "SNA"
+    PATTERN_MOTIFS = "PATTERN_MOTIFS"
+    GAT_LINK_PREDICTION = "GAT_LINK_PREDICTION"
+    ALL = [SNA, PATTERN_MOTIFS, GAT_LINK_PREDICTION]
+
+
+class AnalysisParameters(BaseModel):
+    """Optional tuning parameters for analysis pipelines."""
+    time_window_days: int = Field(default=90, ge=1, le=3650)
+    min_confidence_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
+
+
+class AnalysisTriggerRequest(BaseModel):
+    """Request payload to dispatch asynchronous analysis."""
+    pipelines: List[str] = Field(
+        default_factory=lambda: [AnalysisPipelines.SNA, AnalysisPipelines.PATTERN_MOTIFS],
+        description="List of analytical pipelines to execute",
+    )
+    parameters: AnalysisParameters = Field(default_factory=AnalysisParameters)
+
+    @field_validator("pipelines")
+    @classmethod
+    def validate_pipelines(cls, v: List[str]) -> List[str]:
+        if not v:
+            raise ValueError("At least one analysis pipeline must be specified.")
+        for p in v:
+            if p.upper() not in AnalysisPipelines.ALL:
+                raise ValueError(f"Unknown pipeline '{p}'. Allowed: {AnalysisPipelines.ALL}")
+        return [p.upper() for p in v]
+
+
+class AnalysisTriggerResponse(BaseModel):
+    """Immediate receipt returned upon async analysis dispatch (HTTP 202 Accepted)."""
+    run_id: UUID
+    case_id: UUID
+    status: str = "PENDING"
+    pipelines: List[str]
+    triggered_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class AnalysisRunDetailResponse(BaseModel):
+    """Execution status and metadata of an analytical run."""
+    model_config = ConfigDict(from_attributes=True)
+
+    run_id: UUID
+    case_id: Optional[UUID] = None
+    model_name: str
+    version: str
+    task_type: str
+    status: str
+    input_snapshot_checksum: str
+    created_at: datetime
+
+
+class ScoreItem(BaseModel):
+    """Prioritization score item for case entity."""
+    score_id: UUID
+    entity_id: UUID
+    canonical_name: str
+    entity_type: str
+    score_type: str
+    value: float
+    features_summary: Optional[Dict[str, Any]] = None
+
+
+class CaseScoresResponse(BaseModel):
+    """Collection of case investigative priority scores."""
+    case_id: UUID
+    scores: List[ScoreItem] = Field(default_factory=list)
+    total: int = Field(ge=0)
+
+
+class AlertItem(BaseModel):
+    """Pattern finding / motif alert."""
+    alert_id: UUID
+    case_id: UUID
+    alert_type: str
+    severity: str
+    rule_id: str
+    status: str
+    contributing_entities: Any
+
+
+class CaseAlertsResponse(BaseModel):
+    """Collection of case pattern alerts."""
+    case_id: UUID
+    alerts: List[AlertItem] = Field(default_factory=list)
+    total: int = Field(ge=0)
+
+
+class EvidenceDetailResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    evidence_id: UUID
+    case_id: UUID
+    relationship_id: Optional[UUID] = None
+    source_ref: str
+    support_type: str
+    document_id: Optional[UUID] = None
+    chunk_id: Optional[UUID] = None
+    file_name: Optional[str] = None
+    version_hash: Optional[str] = None
+    page_number: Optional[int] = None
+    character_start: Optional[int] = None
+    character_end: Optional[int] = None
+    snippet: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class AlertFilterParams(BaseModel):
+    severity: Optional[str] = None
+    status: Optional[str] = None
