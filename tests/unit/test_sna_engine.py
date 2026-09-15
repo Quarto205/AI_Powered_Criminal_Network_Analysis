@@ -64,11 +64,14 @@ def test_sna_engine_bridges(test_graph):
 
 def test_sna_engine_shortest_path(test_graph):
     engine = SNAEngine(test_graph)
-    # Even though directed A->B->C, the path can be found on undirected view
-    # But wait, we specified the shortest path uses undirected view.
+    # Directed path exists A->B->C
     path_result = engine.find_bounded_shortest_path("A", "C", max_hops=2)
     assert path_result["status"] == "success"
     assert path_result["path_nodes"] == ["A", "B", "C"]
+    
+    # Directed path doesn't exist for C->A, but undirected would. Since we use directed:
+    path_result3 = engine.find_bounded_shortest_path("C", "A", max_hops=5)
+    assert path_result3["status"] == "error"
     
     path_result2 = engine.find_bounded_shortest_path("A", "F", max_hops=5)
     assert path_result2["status"] == "error"

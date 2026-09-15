@@ -178,11 +178,8 @@ class SNAEngine:
             return {"status": "error", "message": "Source and target are identical"}
             
         try:
-            # We use undirected view if we want to trace relationships backwards too, 
-            # but the contract implies "appropriate graph representation".
-            # For investigative paths, often any direction is acceptable, so we use undirected for paths.
-            undirected_G = self.get_undirected_view()
-            path = nx.shortest_path(undirected_G, source=source, target=target)
+            # The contract requires direction-sensitive path/relationship analysis
+            path = nx.shortest_path(self.graph, source=source, target=target)
             
             if len(path) - 1 > max_hops:
                 return {"status": "error", "message": "Path exceeds maximum allowed hops"}
