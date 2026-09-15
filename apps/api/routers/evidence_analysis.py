@@ -68,17 +68,84 @@ async def _async_analysis_worker(run_id: UUID, case_id: UUID, session_factory=No
     """
     from datetime import datetime, timezone
     from backend.db.session import get_session_factory
-    from backend.db.models.analytics import ModelRun
+    from backend.db.models.analytics import ModelRun, NetworkMetric
+    from backend.graph.graph_extractor import GraphExtractor
+    from agents.intelligence.sna_engine import SNAEngine
 
     factory = session_factory or get_session_factory()
     db = factory()
     try:
         run = db.query(ModelRun).filter(ModelRun.run_id == run_id).first()
         if run:
+            run.status = "RUNNING"
+            db.commit()
+
+            if "SNA" in run.task_type.upper():
+                extractor = GraphExtractor()
+                G = extractor.extract_case_graph(str(case_id))
+                
+                engine = SNAEngine(G)
+                metrics = engine.run_all_metrics()
+
+                # Persist metrics to Postgres
+                new_metrics = []
+                
+                # 1. Component metrics
+                comp_data = metrics.get("components", {})
+                new_metrics.append(NetworkMetric(
+                    run_id=run_id, case_id=case_id, target_entity_uuid=None,
+                    metric_type="COMPONENT_COUNT", value=float(comp_data.get("component_count", 0))
+                ))
+                for node, comp_id in comp_data.get("component_assignments", {}).items():
+                    new_metrics.append(NetworkMetric(
+                        run_id=run_id, case_id=case_id, target_entity_uuid=node,
+                        metric_type="COMPONENT_ID", value_str=comp_id
+                    ))
+
+                # 2. Degree Centrality
+                for node, val in metrics.get("degree_centrality", {}).items():
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=node, metric_type="DEGREE_CENTRALITY", value=val))
+
+                # 3. Betweenness Centrality
+                for node, val in metrics.get("betweenness_centrality", {}).items():
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=node, metric_type="BETWEENNESS_CENTRALITY", value=val))
+
+                # 4. PageRank
+                for node, val in metrics.get("pagerank", {}).items():
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=node, metric_type="PAGERANK", value=val))
+                    
+                # 5. Eigenvector
+                for node, val in metrics.get("eigenvector_centrality", {}).items():
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=node, metric_type="EIGENVECTOR_CENTRALITY", value=val))
+                    
+                # 6. K-Core
+                for node, val in metrics.get("k_core", {}).items():
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=node, metric_type="K_CORE", value=float(val)))
+                    
+                # 7. Communities
+                comm_data = metrics.get("communities", {})
+                alg = comm_data.get("algorithm", "UNKNOWN")
+                for node, comm_id in comm_data.get("assignments", {}).items():
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=node, metric_type="COMMUNITY_ID", value_str=comm_id, metadata_={"algorithm": alg}))
+
+                # 8. Bridges and Articulations (Stored as graph-level metadata or node-level flags)
+                bridge_data = metrics.get("bridges", {})
+                for node in bridge_data.get("articulation_points", []):
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=node, metric_type="ARTICULATION_POINT", value=1.0))
+                    
+                # Bridge edges
+                for edge in bridge_data.get("bridges", []):
+                    new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=edge["source"], metric_type="BRIDGE_EDGE", metadata_={"target": edge["target"]}))
+
+                db.bulk_save_objects(new_metrics)
+
             run.status = "SUCCESS"
             db.commit()
             logger.info(f"Asynchronous analysis run {run_id} marked SUCCESS.")
     except Exception as e:
+        if run:
+            run.status = "FAILED"
+            db.commit()
         logger.error(f"Analysis worker failure for run {run_id}: {e}", exc_info=True)
     finally:
         db.close()

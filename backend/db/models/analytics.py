@@ -9,6 +9,8 @@ Tables:
 29. audit_logs (strictly append-only)
 30. saved_queries
 31. exports
+32. agent3_datasets
+33. network_metrics
 """
 
 from datetime import datetime, timezone
@@ -20,12 +22,30 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Integer,
     func,
 )
 from sqlalchemy.orm import relationship
 
 from backend.db.base import Base
 from backend.db.types import GUIDType, JSONBType
+
+
+class Agent3Dataset(Base):
+    """
+    agent3_datasets table: Registry of imported datasets for Agent 3 analytics.
+    """
+    __tablename__ = "agent3_datasets"
+
+    dataset_id = Column(GUIDType, primary_key=True, default=uuid4)
+    dataset_name = Column(String(100), nullable=False, unique=True)
+    version = Column(String(50), nullable=False)
+    source_file = Column(String(255), nullable=False)
+    checksum = Column(String(64), nullable=False)
+    node_count = Column(Integer, nullable=False)
+    edge_count = Column(Integer, nullable=False)
+    schema_version = Column(String(50), nullable=False)
+    imported_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
 
 
 class ModelRun(Base):
@@ -82,6 +102,28 @@ class RiskScore(Base):
 
     entity = relationship("Entity")
     model_run = relationship("ModelRun", back_populates="risk_scores")
+
+
+class NetworkMetric(Base):
+    """
+    network_metrics table: Structural graph analytics (e.g., Degree, Betweenness, K-Core, Communities).
+    Derived from deterministic graph projection properties, not predictive models.
+    """
+    __tablename__ = "network_metrics"
+
+    metric_id = Column(GUIDType, primary_key=True, default=uuid4)
+    run_id = Column(GUIDType, ForeignKey("model_runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id = Column(GUIDType, ForeignKey("cases.case_id", ondelete="CASCADE"), nullable=False, index=True)
+    target_entity_uuid = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="CASCADE"), nullable=True, index=True)
+    metric_type = Column(String(50), nullable=False)
+    value = Column(Float, nullable=True)
+    value_str = Column(String(255), nullable=True)
+    metadata_ = Column("metadata", JSONBType, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+
+    model_run = relationship("ModelRun")
+    case = relationship("Case")
+    entity = relationship("Entity")
 
 
 class Alert(Base):

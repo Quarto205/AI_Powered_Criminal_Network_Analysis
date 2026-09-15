@@ -46,13 +46,15 @@ from backend.db.models.entities import (
     normalize_identifier,
 )
 
-# Domain D: AI, Analytics, and Audit (8 tables)
+# Domain D: AI, Analytics, and Audit (9 tables)
 from backend.db.models.analytics import (
+    Agent3Dataset,
     Alert,
     AuditLog,
     Export,
     GraphSnapshot,
     ModelRun,
+    NetworkMetric,
     Prediction,
     RiskScore,
     SavedQuery,
@@ -103,8 +105,9 @@ __all__ = [
     "Phone",
     "Account",
     "InvestigationNote",
-    # Domain D (24-31)
+    # Domain D (24-32)
     "ModelRun",
+    "NetworkMetric",
     "Prediction",
     "RiskScore",
     "Alert",
@@ -112,4 +115,5 @@ __all__ = [
     "AuditLog",
     "SavedQuery",
     "Export",
+    "Agent3Dataset",
 ]
