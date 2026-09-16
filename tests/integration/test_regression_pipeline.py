@@ -12,7 +12,7 @@ from backend.db.models.identity import Case, CaseMember, User
 from backend.jobs.graph_sync_worker import GraphSyncWorker
 from backend.services.graph_projection import GraphProjectionService
 from backend.repositories.neo4j_repository import Neo4jRepository
-from scripts.seed_demo import seed_demo_data
+from scripts.seed_demo import seed_postgres
 
 # Deterministic test namespace
 REGRESSION_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_DNS, "sih26189.regression_test")
@@ -35,8 +35,8 @@ def regression_db_session():
         db.commit()
 
     # Create canonical deterministic data using the real demo seeder
-    # Note: seed_demo_data itself uses SessionLocal which connects to the same DB
-    case_id, _ = seed_demo_data()
+    # Note: seed_postgres uses the provided db session
+    case_id, _ = seed_postgres(db)
     
     yield db, case_id
     

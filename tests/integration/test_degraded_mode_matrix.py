@@ -52,10 +52,12 @@ def matrix_db():
     yield db
     
     for cid in [CASE_A, CASE_B]:
+        db.execute(text("SET session_replication_role = 'replica';"))
         db.execute(text("DELETE FROM audit_logs WHERE case_id = :c"), {"c": str(cid)})
         db.execute(text("DELETE FROM documents WHERE case_id = :c"), {"c": str(cid)})
         db.execute(text("DELETE FROM case_members WHERE case_id = :c"), {"c": str(cid)})
         db.execute(text("DELETE FROM cases WHERE case_id = :c"), {"c": str(cid)})
+        db.execute(text("SET session_replication_role = 'origin';"))
     
     for uid in [USER_A, USER_B]:
         db.execute(text("DELETE FROM users WHERE user_id = :u"), {"u": str(uid)})

@@ -1,0 +1,391 @@
+{
+  "cases": [
+    {
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "case_code": "CASE-A",
+      "title": "Synthetic Network Demo"
+    },
+    {
+      "case_id": "0e262301-11a1-5ccc-8ed2-d09d1eec6e0c",
+      "case_code": "CASE-B",
+      "title": "Isolated Background Noise"
+    }
+  ],
+  "entities": [
+    {
+      "entity_id": "e4337991-cdd9-542e-a58f-c7a5c51b72b2",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "Synthetic Actor Alpha (Kingpin / Hub)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "2a641b56-eee8-518c-a095-c87a2fd3f1b0",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PHONE",
+      "canonical_name": "+91-9999900001",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "d92159d4-8f6a-51f0-9b5f-3b24264104e0",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G1 Actor 0 (Smuggling Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "5dbd73e5-49c0-5e31-83c0-f3b242b2bfd8",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G1 Actor 1 (Smuggling Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "3b6a3acf-d168-5ad9-a4d6-c0677a944358",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G1 Actor 2 (Smuggling Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "48843db9-ac31-5ec6-8588-3153cfc2dcaf",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G1 Actor 3 (Smuggling Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "61937cd8-ff94-5e1d-976c-c329ff78a98f",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G1 Actor 4 (Smuggling Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "85c7404a-1169-51a2-a2e1-e4ab9649f7f8",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "Synthetic Broker Beta (Bridge / Conduit)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "56ff30d2-5d20-5674-950f-af830f29c742",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G2 Actor 0 (Distribution Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "1893c3bb-6d96-5967-aa98-9281d4b33221",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G2 Actor 1 (Distribution Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "d5babe78-7e27-5c62-a8ff-fc07c28a728a",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G2 Actor 2 (Distribution Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "73ec1c0a-543d-5ff1-8053-283ea38f87ee",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "G2 Actor 3 (Distribution Cell)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "939796db-2833-5414-968d-a347bfbc1a08",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "ORGANIZATION",
+      "canonical_name": "Synthetic Front Corp Ltd",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "9c16b3b0-7936-5d3e-9640-5feef481fba5",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "BANK_ACCOUNT",
+      "canonical_name": "HDFC-ACC-1001",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "a24f2399-ff06-5c7d-8b36-56800fb4e80c",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "BANK_ACCOUNT",
+      "canonical_name": "SBI-ACC-1002",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "30c8c5be-d492-55dd-ae69-7ad4f2f0bec4",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "LOCATION",
+      "canonical_name": "Synthetic Hub (Safehouse / Port)",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "81e6c955-6484-585e-bcdb-fdd9fb5c8c56",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "entity_type": "PERSON",
+      "canonical_name": "Peripheral Informant",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "2084b608-119f-51f0-804d-b37680c20f69",
+      "case_id": "0e262301-11a1-5ccc-8ed2-d09d1eec6e0c",
+      "entity_type": "PERSON",
+      "canonical_name": "Isolated B1",
+      "status": "ACTIVE"
+    },
+    {
+      "entity_id": "15d0b43b-a866-51ad-b71b-9fde482350fa",
+      "case_id": "0e262301-11a1-5ccc-8ed2-d09d1eec6e0c",
+      "entity_type": "PERSON",
+      "canonical_name": "Isolated B2",
+      "status": "ACTIVE"
+    }
+  ],
+  "relationships": [
+    {
+      "relationship_id": "ab59db83-3a68-5aa0-968e-bcc8b900c54c",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "e4337991-cdd9-542e-a58f-c7a5c51b72b2",
+      "target_entity_id": "2a641b56-eee8-518c-a095-c87a2fd3f1b0",
+      "type": "OWNS",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "f251b3a9-76ad-5fa0-a0f0-0d193d4857e4",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "d92159d4-8f6a-51f0-9b5f-3b24264104e0",
+      "target_entity_id": "5dbd73e5-49c0-5e31-83c0-f3b242b2bfd8",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "fc4fe5e8-5b1a-573b-95d5-60237815343a",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "d92159d4-8f6a-51f0-9b5f-3b24264104e0",
+      "target_entity_id": "3b6a3acf-d168-5ad9-a4d6-c0677a944358",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "586183ea-f83e-562e-81c7-878763035e47",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "d92159d4-8f6a-51f0-9b5f-3b24264104e0",
+      "target_entity_id": "48843db9-ac31-5ec6-8588-3153cfc2dcaf",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "314c8059-5b36-5253-b995-d4bed76a4061",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "d92159d4-8f6a-51f0-9b5f-3b24264104e0",
+      "target_entity_id": "61937cd8-ff94-5e1d-976c-c329ff78a98f",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "bf91206b-dbed-5cff-93af-252f71fda02e",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "d92159d4-8f6a-51f0-9b5f-3b24264104e0",
+      "target_entity_id": "e4337991-cdd9-542e-a58f-c7a5c51b72b2",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "f9900b3a-7836-5b87-bbaf-01ef6b260405",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "5dbd73e5-49c0-5e31-83c0-f3b242b2bfd8",
+      "target_entity_id": "3b6a3acf-d168-5ad9-a4d6-c0677a944358",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "5f1f5261-2f50-55ba-9d5a-1ca45bdf7afb",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "5dbd73e5-49c0-5e31-83c0-f3b242b2bfd8",
+      "target_entity_id": "48843db9-ac31-5ec6-8588-3153cfc2dcaf",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "06a673d7-b27c-50f3-a1b7-b89a30dd1cbe",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "5dbd73e5-49c0-5e31-83c0-f3b242b2bfd8",
+      "target_entity_id": "61937cd8-ff94-5e1d-976c-c329ff78a98f",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "d3a1a092-6387-5e6d-8154-2bc8dc11ffa2",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "3b6a3acf-d168-5ad9-a4d6-c0677a944358",
+      "target_entity_id": "48843db9-ac31-5ec6-8588-3153cfc2dcaf",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "69b60ddf-985e-5277-8e7b-1752cd55e608",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "3b6a3acf-d168-5ad9-a4d6-c0677a944358",
+      "target_entity_id": "61937cd8-ff94-5e1d-976c-c329ff78a98f",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "2b27d490-1805-5488-ad27-64467107213b",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "3b6a3acf-d168-5ad9-a4d6-c0677a944358",
+      "target_entity_id": "e4337991-cdd9-542e-a58f-c7a5c51b72b2",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "b3d3949c-8436-5939-9383-ef1d56460f1f",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "48843db9-ac31-5ec6-8588-3153cfc2dcaf",
+      "target_entity_id": "61937cd8-ff94-5e1d-976c-c329ff78a98f",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "c759b216-2366-5a48-93f8-2e6f4580a88b",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "61937cd8-ff94-5e1d-976c-c329ff78a98f",
+      "target_entity_id": "e4337991-cdd9-542e-a58f-c7a5c51b72b2",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "9512db26-33f6-57e1-beda-74e2161f0ec5",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "85c7404a-1169-51a2-a2e1-e4ab9649f7f8",
+      "target_entity_id": "d92159d4-8f6a-51f0-9b5f-3b24264104e0",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "16eefe90-1fe1-5e7c-8af1-b83ee6fbd069",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "56ff30d2-5d20-5674-950f-af830f29c742",
+      "target_entity_id": "1893c3bb-6d96-5967-aa98-9281d4b33221",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "d8ea9d3c-b9c3-5d36-a33e-ab53b432f5b9",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "56ff30d2-5d20-5674-950f-af830f29c742",
+      "target_entity_id": "d5babe78-7e27-5c62-a8ff-fc07c28a728a",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "f3db169e-6f20-5987-be36-e106ea8a33f5",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "56ff30d2-5d20-5674-950f-af830f29c742",
+      "target_entity_id": "73ec1c0a-543d-5ff1-8053-283ea38f87ee",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "e80596b4-67bf-586b-af35-4aa574f6a4e9",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "1893c3bb-6d96-5967-aa98-9281d4b33221",
+      "target_entity_id": "d5babe78-7e27-5c62-a8ff-fc07c28a728a",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "50fd808a-d94e-5153-86b5-1b8d93c6a1b8",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "1893c3bb-6d96-5967-aa98-9281d4b33221",
+      "target_entity_id": "73ec1c0a-543d-5ff1-8053-283ea38f87ee",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "21a6be4b-721e-5e6b-a6e4-d60b55f0b4e0",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "d5babe78-7e27-5c62-a8ff-fc07c28a728a",
+      "target_entity_id": "73ec1c0a-543d-5ff1-8053-283ea38f87ee",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "e03bb935-150f-583f-9ae5-405b88f53af4",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "85c7404a-1169-51a2-a2e1-e4ab9649f7f8",
+      "target_entity_id": "56ff30d2-5d20-5674-950f-af830f29c742",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "55f22d40-2d9b-5a46-879c-56a1fb8b806f",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "e4337991-cdd9-542e-a58f-c7a5c51b72b2",
+      "target_entity_id": "939796db-2833-5414-968d-a347bfbc1a08",
+      "type": "AFFILIATED_WITH",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "5e73886a-c41b-5d49-828b-50361fa6312c",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "1893c3bb-6d96-5967-aa98-9281d4b33221",
+      "target_entity_id": "9c16b3b0-7936-5d3e-9640-5feef481fba5",
+      "type": "OWNS",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "c6455d28-9887-5fcc-9e2e-3a8d4a652ee4",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "5dbd73e5-49c0-5e31-83c0-f3b242b2bfd8",
+      "target_entity_id": "a24f2399-ff06-5c7d-8b36-56800fb4e80c",
+      "type": "OWNS",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "616e43e2-c60c-5b0f-8ac9-270cdcb226b4",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "9c16b3b0-7936-5d3e-9640-5feef481fba5",
+      "target_entity_id": "a24f2399-ff06-5c7d-8b36-56800fb4e80c",
+      "type": "TRANSFERRED_TO",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "87e31981-415c-5143-b414-e53b8bb1139e",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "e4337991-cdd9-542e-a58f-c7a5c51b72b2",
+      "target_entity_id": "30c8c5be-d492-55dd-ae69-7ad4f2f0bec4",
+      "type": "LOCATED_AT",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "4990a122-e100-59ae-b3a5-c839168a2ce6",
+      "case_id": "3b018e46-03ca-59eb-9340-a1ee5c21fa9c",
+      "source_entity_id": "81e6c955-6484-585e-bcdb-fdd9fb5c8c56",
+      "target_entity_id": "d5babe78-7e27-5c62-a8ff-fc07c28a728a",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    },
+    {
+      "relationship_id": "63ebf777-1d16-5022-bc33-1d5308be1fff",
+      "case_id": "0e262301-11a1-5ccc-8ed2-d09d1eec6e0c",
+      "source_entity_id": "2084b608-119f-51f0-804d-b37680c20f69",
+      "target_entity_id": "15d0b43b-a866-51ad-b71b-9fde482350fa",
+      "type": "CONTACTED",
+      "status": "OBSERVED"
+    }
+  ],
+  "summary": {
+    "total_entities": 19,
+    "total_relationships": 29,
+    "case_a_entities": 17,
+    "case_a_relationships": 28,
+    "case_b_entities": 2,
+    "case_b_relationships": 1
+  }
+}

@@ -1,0 +1,24 @@
+Investigative Lead
+
+Priority Score: {{ (risk_score.value * 100) | round(1) }} / 100
+
+Top contributing signals:
+{% for feat in top_features %}
+- {{ feat.name }} (Contribution: {{ (feat.value * 100) | round(1) }})
+{% endfor %}
+
+Evidence context:
+The priority ranking is based on {{ active_alerts_count }} alerts and {{ observed_rels_count }} observed relationships.
+
+Model context:
+Priority Ranking Engine Run: {{ model_run_id }}
+Template Version: {{ template_version }}
+
+Confidence semantics:
+The priority score and individual signal components (e.g., GATv2 inferred links) represent the system's score for candidate relationships and structural motifs. They do not represent a definitive likelihood of criminal action.
+
+Known limitations:
+The ranking reflects the configured signals and available data. Missing or incomplete information may affect the ranking.
+
+Human review:
+This is an investigative lead for human review, not a factual determination of wrongdoing.

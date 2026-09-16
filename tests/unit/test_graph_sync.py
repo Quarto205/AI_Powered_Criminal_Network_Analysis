@@ -300,6 +300,7 @@ class TestGraphQueryAndCytoscapeFormatting:
             case_id=cid,
             source_ref=e1.entity_id,
             target_ref=e3.entity_id,
+            predicted_relationship_type="ASSOCIATED_WITH",
             score=0.75,
             calibration="CALIBRATED",
         )

@@ -320,6 +320,8 @@ class AlertItem(BaseModel):
     rule_id: str
     status: str
     contributing_entities: Any
+    metadata_: Optional[Dict[str, Any]] = None
+    created_at: Optional[datetime] = None
 
 
 class CaseAlertsResponse(BaseModel):

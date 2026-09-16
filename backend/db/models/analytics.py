@@ -9,6 +9,8 @@ Tables:
 29. audit_logs (strictly append-only)
 30. saved_queries
 31. exports
+32. agent3_datasets
+33. network_metrics
 """
 
 from datetime import datetime, timezone
@@ -20,12 +22,30 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     String,
+    Integer,
     func,
 )
 from sqlalchemy.orm import relationship
 
 from backend.db.base import Base
 from backend.db.types import GUIDType, JSONBType
+
+
+class Agent3Dataset(Base):
+    """
+    agent3_datasets table: Registry of imported datasets for Agent 3 analytics.
+    """
+    __tablename__ = "agent3_datasets"
+
+    dataset_id = Column(GUIDType, primary_key=True, default=uuid4)
+    dataset_name = Column(String(100), nullable=False, unique=True)
+    version = Column(String(50), nullable=False)
+    source_file = Column(String(255), nullable=False)
+    checksum = Column(String(64), nullable=False)
+    node_count = Column(Integer, nullable=False)
+    edge_count = Column(Integer, nullable=False)
+    schema_version = Column(String(50), nullable=False)
+    imported_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
 
 
 class ModelRun(Base):
@@ -58,8 +78,12 @@ class Prediction(Base):
     case_id = Column(GUIDType, ForeignKey("cases.case_id", ondelete="CASCADE"), nullable=False, index=True)
     source_ref = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="RESTRICT"), nullable=False)
     target_ref = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="RESTRICT"), nullable=False)
+    predicted_relationship_type = Column(String(50), nullable=False)
     score = Column(Float, nullable=False)
     calibration = Column(String(50), nullable=False)
+    status = Column(String(50), nullable=False, default="INFERRED")
+    metadata_ = Column("metadata", JSONBType, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
 
     model_run = relationship("ModelRun", back_populates="predictions")
     case = relationship("Case")
@@ -84,6 +108,53 @@ class RiskScore(Base):
     model_run = relationship("ModelRun", back_populates="risk_scores")
 
 
+class Explanation(Base):
+    """
+    explanations table: Stores the deterministic or AI-generated explanation for a RiskScore priority ranking.
+    """
+    __tablename__ = "explanations"
+
+    explanation_id = Column(GUIDType, primary_key=True, default=uuid4)
+    score_id = Column(GUIDType, ForeignKey("risk_scores.score_id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
+    target_entity_uuid = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id = Column(GUIDType, ForeignKey("cases.case_id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id = Column(GUIDType, ForeignKey("model_runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    explanation_text = Column(String, nullable=False)
+    summary = Column(String, nullable=True)
+    context_data = Column(JSONBType, nullable=True)
+    model_version = Column(String(100), nullable=False)
+    provider_type = Column(String(50), nullable=False)  # e.g., "TEMPLATE", "LLM"
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+
+    risk_score = relationship("RiskScore", backref="explanation")
+    entity = relationship("Entity", foreign_keys=[target_entity_uuid])
+    case = relationship("Case")
+    model_run = relationship("ModelRun")
+
+
+class NetworkMetric(Base):
+    """
+    network_metrics table: Structural graph analytics (e.g., Degree, Betweenness, K-Core, Communities).
+    Derived from deterministic graph projection properties, not predictive models.
+    """
+    __tablename__ = "network_metrics"
+
+    metric_id = Column(GUIDType, primary_key=True, default=uuid4)
+    run_id = Column(GUIDType, ForeignKey("model_runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id = Column(GUIDType, ForeignKey("cases.case_id", ondelete="CASCADE"), nullable=False, index=True)
+    target_entity_uuid = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="CASCADE"), nullable=True, index=True)
+    metric_type = Column(String(50), nullable=False)
+    value = Column(Float, nullable=True)
+    value_str = Column(String(255), nullable=True)
+    metadata_ = Column("metadata", JSONBType, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+
+    model_run = relationship("ModelRun")
+    case = relationship("Case")
+    entity = relationship("Entity")
+
+
 class Alert(Base):
     """
     alerts table: Deterministic motif alerts and pattern detection findings.
@@ -97,6 +168,8 @@ class Alert(Base):
     rule_id = Column(String(100), nullable=False)
     contributing_entities = Column(JSONBType, nullable=False)
     status = Column(String(50), nullable=False, default="NEW")
+    metadata_ = Column("metadata", JSONBType, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
 
     case = relationship("Case")
 

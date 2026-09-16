@@ -6,7 +6,10 @@ Never hardcodes credentials or logs sensitive secrets.
 
 import os
 from typing import Optional
+from dotenv import load_dotenv
 from pydantic import BaseModel, Field
+
+load_dotenv()
 
 
 class Neo4jSettings(BaseModel):
@@ -17,7 +20,7 @@ class Neo4jSettings(BaseModel):
     neo4j_uri: str = Field(default="bolt://localhost:7687")
     neo4j_user: str = Field(default="neo4j")
     neo4j_password: str = Field(default="password")
-    neo4j_database: str = Field(default="neo4j")
+    neo4j_database: Optional[str] = Field(default=None)
     max_connection_lifetime: int = Field(default=3600)
     max_connection_pool_size: int = Field(default=50)
     connection_acquisition_timeout: float = Field(default=30.0)
@@ -29,7 +32,7 @@ class Neo4jSettings(BaseModel):
             neo4j_uri=os.getenv("NEO4J_URI", "bolt://localhost:7687"),
             neo4j_user=os.getenv("NEO4J_USERNAME", os.getenv("NEO4J_USER", "neo4j")),
             neo4j_password=os.getenv("NEO4J_PASSWORD", "password"),
-            neo4j_database=os.getenv("NEO4J_DATABASE", "neo4j"),
+            neo4j_database=os.getenv("NEO4J_DATABASE") or None,
             max_connection_lifetime=int(os.getenv("NEO4J_MAX_CONNECTION_LIFETIME", "3600")),
             max_connection_pool_size=int(os.getenv("NEO4J_MAX_CONNECTION_POOL_SIZE", "50")),
             connection_acquisition_timeout=float(os.getenv("NEO4J_CONNECTION_ACQUISITION_TIMEOUT", "30.0")),

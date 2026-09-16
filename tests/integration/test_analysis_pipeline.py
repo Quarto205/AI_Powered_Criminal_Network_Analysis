@@ -478,6 +478,7 @@ class TestAnalysisPipeline:
             case_id=case_id,
             source_ref=env["ent_a1"].entity_id,
             target_ref=ent.entity_id,
+            predicted_relationship_type="ASSOCIATED_WITH",
             score=0.32,
             calibration="CALIBRATED",
         )
