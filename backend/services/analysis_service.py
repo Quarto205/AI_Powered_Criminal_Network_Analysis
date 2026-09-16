@@ -207,6 +207,8 @@ class AnalysisService:
                 rule_id=a.rule_id,
                 status=a.status,
                 contributing_entities=a.contributing_entities,
+                metadata_=a.metadata_,
+                created_at=a.created_at,
             )
             for a in alerts
         ]

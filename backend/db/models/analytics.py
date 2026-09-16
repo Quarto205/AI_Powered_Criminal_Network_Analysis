@@ -139,6 +139,8 @@ class Alert(Base):
     rule_id = Column(String(100), nullable=False)
     contributing_entities = Column(JSONBType, nullable=False)
     status = Column(String(50), nullable=False, default="NEW")
+    metadata_ = Column("metadata", JSONBType, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
 
     case = relationship("Case")
 

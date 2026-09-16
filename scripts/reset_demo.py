@@ -30,9 +30,14 @@ POSTGRES_URL = os.environ.get(
     "DATABASE_URL", 
     "postgresql://postgres:your_secure_postgres_password@localhost:5432/sih26189"
 )
-NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "your_secure_neo4j_password")
+from dotenv import load_dotenv
+load_dotenv()
+from backend.config.neo4j import Neo4jSettings
+neo4j_settings = Neo4jSettings.from_env()
+
+NEO4J_URI = neo4j_settings.neo4j_uri
+NEO4J_USER = neo4j_settings.neo4j_user
+NEO4J_PASSWORD = neo4j_settings.neo4j_password
 
 def reset_demo():
     print("Warning: This will delete demo Cases A and B from Postgres and Neo4j.")
@@ -46,13 +51,14 @@ def reset_demo():
     engine = get_engine(custom_url=POSTGRES_URL)
     db = get_session_factory(engine)()
     try:
-        case_a = db.query(Case).filter(Case.case_id == case_a_id).first()
-        if case_a:
-            db.delete(case_a)
+        from backend.db.models.entities import Entity, Relationship
         
-        case_b = db.query(Case).filter(Case.case_id == case_b_id).first()
-        if case_b:
-            db.delete(case_b)
+        # Delete dependent items for Case A and B first
+        for cid in [case_a_id, case_b_id]:
+            db.query(Relationship).filter(Relationship.case_id == cid).delete(synchronize_session=False)
+            db.query(Entity).filter(Entity.case_id == cid).delete(synchronize_session=False)
+            db.query(Case).filter(Case.case_id == cid).delete(synchronize_session=False)
+        
             
         db.commit()
         print("[OK] PostgreSQL demo cases deleted (cascaded).")
@@ -65,7 +71,7 @@ def reset_demo():
     # 2. Neo4j Delete
     driver = GraphDatabase.driver(NEO4J_URI, auth=basic_auth(NEO4J_USER, NEO4J_PASSWORD))
     try:
-        with driver.session() as session:
+        with driver.session(database=neo4j_settings.neo4j_database) as session:
             # Delete relationships first
             session.run("MATCH ()-[r]->() WHERE r.case_id IN [$ca, $cb] DELETE r", ca=str(case_a_id), cb=str(case_b_id))
             # Delete nodes

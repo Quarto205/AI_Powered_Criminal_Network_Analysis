@@ -60,7 +60,7 @@ from backend.db.models import (
 )
 from backend.db.triggers import ImmutableRecordError
 
-EXPECTED_31_TABLES = {
+EXPECTED_33_TABLES = {
     # Domain A: Identity / RBAC / Multi-Tenant (6)
     "users",
     "roles",
@@ -96,6 +96,8 @@ EXPECTED_31_TABLES = {
     "audit_logs",
     "saved_queries",
     "exports",
+    "agent3_datasets",
+    "network_metrics",
 }
 
 
@@ -140,22 +142,22 @@ def db_session(db_engine) -> Generator[Session, None, None]:
 
 
 # ==============================================================================
-# 1. SCHEMA COMPLETENESS & TABLE COUNT (31 TABLES)
+# 1. SCHEMA COMPLETENESS & TABLE COUNT (33 TABLES)
 # ==============================================================================
 
 class TestSchemaCompleteness:
-    """Verifies that all 31 required tables exist with required constraints and columns."""
+    """Verifies that all 33 required tables exist with required constraints and columns."""
 
-    def test_all_31_tables_in_metadata(self):
+    def test_all_33_tables_in_metadata(self):
         registered_tables = set(Base.metadata.tables.keys())
-        assert len(registered_tables) == 31, f"Expected 31 tables, found {len(registered_tables)}"
-        assert registered_tables == EXPECTED_31_TABLES
+        assert len(registered_tables) == 33, f"Expected 33 tables, found {len(registered_tables)}"
+        assert registered_tables == EXPECTED_33_TABLES
 
-    def test_all_31_tables_created_in_database(self, db_engine):
+    def test_all_33_tables_created_in_database(self, db_engine):
         inspector = inspect(db_engine)
         db_tables = set(inspector.get_table_names())
-        assert len(db_tables) == 31
-        assert db_tables == EXPECTED_31_TABLES
+        assert len(db_tables) == 33
+        assert db_tables == EXPECTED_33_TABLES
 
     def test_uuid_primary_keys_on_all_tables(self):
         """All internal primary keys must be UUID type (not autoincrement integer)."""
@@ -655,8 +657,8 @@ class TestAlembicMigration:
         created_tables = {row[0] for row in cur.fetchall()}
         conn.close()
 
-        assert len(created_tables) == 31, f"Expected 31 tables from Alembic upgrade, got {len(created_tables)}"
-        assert created_tables == EXPECTED_31_TABLES
+        assert len(created_tables) == 33, f"Expected 33 tables from Alembic upgrade, got {len(created_tables)}"
+        assert created_tables == EXPECTED_33_TABLES
 
         # 2. Run downgrade base
         command.downgrade(cfg, "base")
@@ -678,5 +680,6 @@ class TestAlembicMigration:
         recreated_tables = {row[0] for row in cur.fetchall()}
         conn.close()
 
-        assert len(recreated_tables) == 31
+        assert len(recreated_tables) == 33
+        assert recreated_tables == EXPECTED_33_TABLES
 

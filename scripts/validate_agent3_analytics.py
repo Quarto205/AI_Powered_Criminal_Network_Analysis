@@ -23,9 +23,14 @@ def deterministic_uuid(name: str) -> uuid.UUID:
     """Returns a deterministic UUID based on a string name."""
     return uuid.uuid5(NAMESPACE_AGENT3_SEED, name)
 
-NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "your_secure_neo4j_password")
+from dotenv import load_dotenv
+load_dotenv()
+from backend.config.neo4j import Neo4jSettings
+neo4j_settings = Neo4jSettings.from_env()
+
+NEO4J_URI = neo4j_settings.neo4j_uri
+NEO4J_USER = neo4j_settings.neo4j_user
+NEO4J_PASSWORD = neo4j_settings.neo4j_password
 
 def get_neo4j_driver():
     return GraphDatabase.driver(NEO4J_URI, auth=basic_auth(NEO4J_USER, NEO4J_PASSWORD))
@@ -34,7 +39,7 @@ def validate_networkx(driver, case_a_id: str):
     print("\n--- Running NetworkX Sanity Analysis ---")
     G = nx.Graph()
     
-    with driver.session() as session:
+    with driver.session(database=neo4j_settings.neo4j_database) as session:
         # Load nodes
         nodes = session.run("MATCH (n) WHERE n.case_id = $cid RETURN n.entity_id AS id, labels(n)[0] AS type", cid=case_a_id)
         for record in nodes:
@@ -68,7 +73,7 @@ def validate_networkx(driver, case_a_id: str):
 def validate_gds(driver, case_a_id: str):
     print("\n--- Running Neo4j GDS Sanity Analysis ---")
     try:
-        with driver.session() as session:
+        with driver.session(database=neo4j_settings.neo4j_database) as session:
             # Check GDS version
             result = session.run("CALL gds.version() YIELD gdsVersion")
             print(f"GDS Version: {result.single()['gdsVersion']}")

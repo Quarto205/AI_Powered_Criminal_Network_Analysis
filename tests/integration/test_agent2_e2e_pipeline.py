@@ -68,25 +68,27 @@ def e2e_db_session():
         session.run("MATCH (n {case_id: $case_id}) DETACH DELETE n", case_id=str(CASE_ID))
     
     # Cascade delete from postgres
-    case = db.query(Case).filter(Case.case_id == CASE_ID).first()
-    if case:
-        # Manually delete dependent records due to RESTRICT constraints
-        db.execute(text("DELETE FROM relationship_evidence WHERE relationship_id IN (SELECT relationship_id FROM relationships WHERE case_id = :case_id)"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM relationships WHERE case_id = :case_id"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM entity_aliases WHERE entity_id IN (SELECT entity_id FROM entities WHERE case_id = :case_id)"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM entity_identifiers WHERE entity_id IN (SELECT entity_id FROM entities WHERE case_id = :case_id)"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM entities WHERE case_id = :case_id"), {"case_id": CASE_ID})
-        
-        db.execute(text("DELETE FROM document_chunks WHERE version_id IN (SELECT version_id FROM document_versions WHERE document_id IN (SELECT document_id FROM documents WHERE case_id = :case_id))"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM document_versions WHERE document_id IN (SELECT document_id FROM documents WHERE case_id = :case_id)"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM documents WHERE case_id = :case_id"), {"case_id": CASE_ID})
-        
-        db.execute(text("DELETE FROM events WHERE case_id = :case_id"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM case_members WHERE case_id = :case_id"), {"case_id": CASE_ID})
-        db.execute(text("DELETE FROM audit_logs WHERE case_id = :case_id"), {"case_id": CASE_ID})
-        
-        db.delete(case)
-        db.commit()
+    db.execute(text("SET session_replication_role = 'replica';"))
+    
+    # Manually delete dependent records due to RESTRICT constraints
+    db.execute(text("DELETE FROM relationship_evidence WHERE relationship_id IN (SELECT relationship_id FROM relationships WHERE case_id = :case_id)"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM relationships WHERE case_id = :case_id"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM entity_aliases WHERE entity_id IN (SELECT entity_id FROM entities WHERE case_id = :case_id)"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM entity_identifiers WHERE entity_id IN (SELECT entity_id FROM entities WHERE case_id = :case_id)"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM entities WHERE case_id = :case_id"), {"case_id": CASE_ID})
+    
+    db.execute(text("DELETE FROM document_chunks WHERE version_id IN (SELECT version_id FROM document_versions WHERE document_id IN (SELECT document_id FROM documents WHERE case_id = :case_id))"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM document_versions WHERE document_id IN (SELECT document_id FROM documents WHERE case_id = :case_id)"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM documents WHERE case_id = :case_id"), {"case_id": CASE_ID})
+    
+    db.execute(text("DELETE FROM events WHERE case_id = :case_id"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM case_members WHERE case_id = :case_id"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM audit_logs WHERE case_id = :case_id"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM cases WHERE case_id = :case_id"), {"case_id": CASE_ID})
+    db.execute(text("DELETE FROM users WHERE user_id = :user_id"), {"user_id": USER_ID})
+    
+    db.execute(text("SET session_replication_role = 'origin';"))
+    db.commit()
         
     db.close()
 

@@ -7,14 +7,21 @@ from neo4j import GraphDatabase, basic_auth
 from backend.db.session import get_engine, get_session_factory
 from backend.db.models.entities import Entity, Relationship
 
+from dotenv import load_dotenv
+load_dotenv()
+
+from backend.config.neo4j import Neo4jSettings
+neo4j_settings = Neo4jSettings.from_env()
+
 # --- Helper Configuration ---
 POSTGRES_URL = os.environ.get(
     "DATABASE_URL", 
     "postgresql://postgres:your_secure_postgres_password@localhost:5432/sih26189"
 )
-NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "your_secure_neo4j_password")
+NEO4J_URI = neo4j_settings.neo4j_uri
+NEO4J_USER = neo4j_settings.neo4j_user
+NEO4J_PASSWORD = neo4j_settings.neo4j_password
+
 
 NAMESPACE_AGENT3_SEED = uuid.UUID("12345678-1234-5678-1234-567812345678")
 
@@ -37,9 +44,19 @@ def neo4j_driver():
     yield driver
     driver.close()
 
+from sqlalchemy import text
+from scripts.seed_demo import seed_postgres, seed_neo4j
+
+@pytest.fixture(scope="module", autouse=True)
+def ensure_seed_data(db_session, neo4j_driver):
+    """Ensure the Agent 3 demo data is seeded before running tests."""
+    case_a_id, case_b_id = seed_postgres(db_session)
+    seed_neo4j(db_session, neo4j_driver, case_a_id)
+    seed_neo4j(db_session, neo4j_driver, case_b_id)
+
 def test_environment_availability(db_session, neo4j_driver):
     # Test DB
-    assert db_session.execute("SELECT 1").scalar() == 1
+    assert db_session.execute(text("SELECT 1")).scalar() == 1
     
     # Test Neo4j
     neo4j_driver.verify_connectivity()
@@ -63,7 +80,7 @@ def test_postgresql_consistency(db_session):
     assert rel_a > 0, "CASE-A should have relationships"
 
 def test_case_isolation(neo4j_driver):
-    with neo4j_driver.session() as session:
+    with neo4j_driver.session(database=neo4j_settings.neo4j_database) as session:
         # Check cross-case edges
         result = session.run("""
         MATCH (a)-[r]-(b)
@@ -78,7 +95,7 @@ def test_neo4j_postgres_consistency(db_session, neo4j_driver):
     pg_ent_a = db_session.query(Entity).filter(Entity.case_id == CASE_A_ID).count()
     pg_rel_a = db_session.query(Relationship).filter(Relationship.case_id == CASE_A_ID).count()
     
-    with neo4j_driver.session() as session:
+    with neo4j_driver.session(database=neo4j_settings.neo4j_database) as session:
         n4j_ent_a = session.run("MATCH (n) WHERE n.case_id = $cid RETURN count(n) AS c", cid=str(CASE_A_ID)).single()["c"]
         n4j_rel_a = session.run("MATCH ()-[r]->() WHERE r.case_id = $cid RETURN count(r) AS c", cid=str(CASE_A_ID)).single()["c"]
         
@@ -89,6 +106,6 @@ def test_seed_determinism(neo4j_driver):
     # The IDs in neo4j should match the deterministic ones we expect
     p_central_uuid = str(deterministic_uuid(f"{CASE_A_ID}-p_central"))
     
-    with neo4j_driver.session() as session:
+    with neo4j_driver.session(database=neo4j_settings.neo4j_database) as session:
         res = session.run("MATCH (n {entity_id: $uid}) RETURN count(n) AS c", uid=p_central_uuid)
         assert res.single()["c"] == 1, "Deterministic central node not found"

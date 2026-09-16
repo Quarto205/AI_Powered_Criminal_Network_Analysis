@@ -43,6 +43,6 @@ def test_pyg_conversion_crime(crime_adapter):
     assert data.x is not None
     assert isinstance(data.x, torch.Tensor)
     assert data.x.shape[0] == 23385
-    assert data.x.shape[1] == 1386  # Check embedding dim
+    assert data.x.shape[1] == 192  # Check embedding dim
     assert data.edge_index is not None
     assert data.edge_index.shape[1] == 42607

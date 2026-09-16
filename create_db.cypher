@@ -1,0 +1,1 @@
+CREATE DATABASE `criminal-network-analysis` IF NOT EXISTS;

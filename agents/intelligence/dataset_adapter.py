@@ -108,11 +108,26 @@ class Agent3DatasetAdapter:
             emb_keys = [k for k in node.keys() if k.startswith("emb_")]
             emb_vector = []
             for k in sorted(emb_keys):
-                emb_vector.extend(node[k])
-            if emb_vector:
-                x_list.append(emb_vector)
+                val = node[k]
+                if isinstance(val, str) and val.strip().startswith("["):
+                    import json
+                    try:
+                        val = json.loads(val)
+                    except Exception:
+                        pass
+                if isinstance(val, (list, tuple)):
+                    emb_vector.extend([float(v) for v in val if isinstance(v, (int, float))])
+                elif isinstance(val, (int, float)):
+                    emb_vector.append(float(val))
+            x_list.append(emb_vector)
         
-        x_tensor = torch.tensor(x_list, dtype=torch.float) if x_list else None
+        max_len = max((len(v) for v in x_list), default=0)
+        if max_len > 0:
+            for v in x_list:
+                v.extend([0.0] * (max_len - len(v)))
+            x_tensor = torch.tensor(x_list, dtype=torch.float)
+        else:
+            x_tensor = None
 
         # Build edge index
         edge_sources = []

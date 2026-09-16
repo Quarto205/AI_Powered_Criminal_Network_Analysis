@@ -4,10 +4,10 @@ Provides connection pooling, health checks, transaction wrappers, and safe grace
 """
 
 import sys
-if sys.version_info >= (3, 14) and "numpy" not in sys.modules:
-    # Python 3.14 on Windows has an experimental mingw numpy build that segfaults on import.
-    # Disabling optional numpy hydration in neo4j prevents access violation.
-    sys.modules["numpy"] = None
+# On Windows with Python 3.14, the installed experimental MinGW build of numpy
+# had an access violation in float128 initialization.
+# Since SIH26189 Backend now depends on numpy via torch_geometric,
+# we cannot disable numpy hydration globally.
 
 import logging
 from typing import Any, Dict, List, Optional

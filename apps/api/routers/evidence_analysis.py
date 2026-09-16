@@ -138,6 +138,12 @@ async def _async_analysis_worker(run_id: UUID, case_id: UUID, session_factory=No
                     new_metrics.append(NetworkMetric(run_id=run_id, case_id=case_id, target_entity_uuid=edge["source"], metric_type="BRIDGE_EDGE", metadata_={"target": edge["target"]}))
 
                 db.bulk_save_objects(new_metrics)
+                db.commit()
+
+            if "PATTERN" in run.task_type.upper():
+                from agents.intelligence.pattern_engine import PatternEngine
+                pattern_engine = PatternEngine(db)
+                pattern_engine.run_all_detectors(case_id)
 
             run.status = "SUCCESS"
             db.commit()

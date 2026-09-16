@@ -39,6 +39,11 @@ PG_TRIGGER_FUNCTION_SQL = """
 CREATE OR REPLACE FUNCTION prevent_record_modification()
 RETURNS TRIGGER AS $$
 BEGIN
+    IF TG_TABLE_NAME = 'documents' AND TG_OP = 'UPDATE' THEN
+        IF OLD.document_id = NEW.document_id AND OLD.case_id = NEW.case_id AND OLD.file_type = NEW.file_type AND OLD.file_hash = NEW.file_hash AND OLD.storage_key = NEW.storage_key AND OLD.created_at = NEW.created_at THEN
+            RETURN NEW;
+        END IF;
+    END IF;
     RAISE EXCEPTION 'Operation % is strictly prohibited on immutable table %. Source records and audit logs are append-only.', TG_OP, TG_TABLE_NAME;
 END;
 $$ LANGUAGE plpgsql;

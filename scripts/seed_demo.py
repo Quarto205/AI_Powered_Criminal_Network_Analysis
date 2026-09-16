@@ -46,9 +46,14 @@ POSTGRES_URL = os.environ.get(
     "DATABASE_URL", 
     "postgresql://postgres:your_secure_postgres_password@localhost:5432/sih26189"
 )
-NEO4J_URI = os.environ.get("NEO4J_URI", "bolt://localhost:7687")
-NEO4J_USER = os.environ.get("NEO4J_USER", "neo4j")
-NEO4J_PASSWORD = os.environ.get("NEO4J_PASSWORD", "your_secure_neo4j_password")
+from dotenv import load_dotenv
+load_dotenv()
+from backend.config.neo4j import Neo4jSettings
+neo4j_settings = Neo4jSettings.from_env()
+
+NEO4J_URI = neo4j_settings.neo4j_uri
+NEO4J_USER = neo4j_settings.neo4j_user
+NEO4J_PASSWORD = neo4j_settings.neo4j_password
 
 def get_neo4j_driver():
     return GraphDatabase.driver(NEO4J_URI, auth=basic_auth(NEO4J_USER, NEO4J_PASSWORD))
@@ -71,7 +76,7 @@ def verify_services():
         driver.verify_connectivity()
         print("[OK] Neo4j reachable.")
         
-        with driver.session() as session:
+        with driver.session(database=neo4j_settings.neo4j_database) as session:
             result = session.run("CALL gds.version() YIELD gdsVersion")
             gds_version = result.single()["gdsVersion"]
             print(f"[OK] Neo4j GDS available (version: {gds_version}).")
@@ -92,7 +97,7 @@ def ensure_constraints(driver):
         "CREATE CONSTRAINT org_id_unique IF NOT EXISTS FOR (n:Organization) REQUIRE n.entity_id IS UNIQUE",
         "CREATE CONSTRAINT loc_id_unique IF NOT EXISTS FOR (n:Location) REQUIRE n.entity_id IS UNIQUE",
     ]
-    with driver.session() as session:
+    with driver.session(database=neo4j_settings.neo4j_database) as session:
         for q in queries:
             try:
                 session.run(q)
@@ -243,7 +248,7 @@ def seed_neo4j(db: Session, driver, case_id: uuid.UUID):
     entities = db.query(Entity).filter(Entity.case_id == case_id).all()
     rels = db.query(Relationship).filter(Relationship.case_id == case_id).all()
     
-    with driver.session() as session:
+    with driver.session(database=neo4j_settings.neo4j_database) as session:
         for ent in entities:
             # Map canonical type to graph label
             label = "Person"
@@ -294,14 +299,14 @@ def verify_counts(db: Session, driver, case_a_id: uuid.UUID, case_b_id: uuid.UUI
     pg_runs = db.query(ModelRun).count()
     
     # Neo4j counts
-    with driver.session() as session:
+    with driver.session(database=neo4j_settings.neo4j_database) as session:
         n4j_ent_a = session.run("MATCH (n) WHERE n.case_id = $cid RETURN count(n) AS c", cid=str(case_a_id)).single()["c"]
         n4j_rel_a = session.run("MATCH ()-[r]->() WHERE r.case_id = $cid RETURN count(r) AS c", cid=str(case_a_id)).single()["c"]
         n4j_ent_b = session.run("MATCH (n) WHERE n.case_id = $cid RETURN count(n) AS c", cid=str(case_b_id)).single()["c"]
         n4j_rel_b = session.run("MATCH ()-[r]->() WHERE r.case_id = $cid RETURN count(r) AS c", cid=str(case_b_id)).single()["c"]
 
     # Cross case queries to ensure isolation
-    with driver.session() as session:
+    with driver.session(database=neo4j_settings.neo4j_database) as session:
         # Are there any edges connecting case A and case B?
         cross_edges = session.run("""
         MATCH (a)-[r]-(b) 
@@ -330,7 +335,7 @@ def verify_counts(db: Session, driver, case_a_id: uuid.UUID, case_b_id: uuid.UUI
     print(f"  nodes: {n4j_ent_a + n4j_ent_b}")
     print(f"  relationships: {n4j_rel_a + n4j_rel_b}")
     
-    print(f"\nIsolation:\n  CASE-A → {'PASS' if iso_pass else 'FAIL'}\n  CASE-B → {'PASS' if iso_pass else 'FAIL'}")
+    print(f"\nIsolation:\n  CASE-A -> {'PASS' if iso_pass else 'FAIL'}\n  CASE-B -> {'PASS' if iso_pass else 'FAIL'}")
     print(f"\nDeterministic IDs:\n  {'PASS' if consistency_pass else 'FAIL'}")
     print("\nSeed completed successfully.")
 
