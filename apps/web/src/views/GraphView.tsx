@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useCase } from '../context/CaseContext';
 import { EntityDrawer } from '../components/entities/EntityDrawer';
-import { MOCK_EDGES } from '../mocks/data';
 import { GraphExplorerView } from '../components/workspace/GraphExplorerView';
+import { apiClient } from '../services/apiClient';
+import { NetworkEdge, EntityDossier } from '../types';
 import {
   Search,
   Sparkles,
@@ -18,23 +19,82 @@ export const GraphView: React.FC = () => {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>('ALL');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [hopDepth, setHopDepth] = useState<number>(2);
+  
+  const [graphNodes, setGraphNodes] = useState<EntityDossier[]>([]);
+  const [graphEdges, setGraphEdges] = useState<NetworkEdge[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { activeCase } = useCase();
+
+  useEffect(() => {
+    const fetchGraph = async () => {
+      if (!activeCase?.id) return;
+      setIsLoading(true);
+      try {
+        const res = await apiClient.get<any>(`/api/v1/cases/${activeCase.id}/graph?depth=${hopDepth}&limit=500`);
+        if (res.success && res.data) {
+          // Assume response data contains nodes and edges matching frontend structure
+          // Or map them if they are in raw Neo4j/Cytoscape format
+          const rawNodes = res.data.nodes || [];
+          const rawEdges = res.data.edges || [];
+          
+          const mappedNodes = rawNodes.map((n: any) => ({
+            id: n.data?.id || n.id,
+            caseId: activeCase.id,
+            name: n.data?.name || n.name || 'Unknown',
+            type: n.data?.label || n.label || 'EVENT',
+            primaryRole: 'Subject',
+            threatLevel: 'MONITORED',
+            degreeCentrality: 0.5,
+            betweenness: 0.5,
+            clusteringCoeff: 0.5,
+            isObserved: true,
+            biometricVerified: false,
+            aliases: [],
+            identifiers: {},
+            evidenceCount: 0,
+            connectionsCount: 0
+          }));
+          
+          const mappedEdges = rawEdges.map((e: any) => ({
+            id: e.data?.id || e.id || `edge-${e.source}-${e.target}`,
+            source: e.data?.source || e.source,
+            target: e.data?.target || e.target,
+            label: e.data?.label || e.label || 'CONNECTED_TO',
+            epistemicType: 'VERIFIED_OBSERVED',
+            confidence: 0.9,
+          }));
+          
+          setGraphNodes(mappedNodes);
+          setGraphEdges(mappedEdges);
+        }
+      } catch (err) {
+        console.error("Graph fetch failed:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchGraph();
+  }, [activeCase?.id, hopDepth]);
 
   // Filter elements
   const filteredEntities = useMemo(() => {
-    return entities.filter((ent) => {
+    // If backend provided graphNodes, use them, otherwise fallback to context entities
+    const baseEntities = graphNodes.length > 0 ? graphNodes : entities;
+    return baseEntities.filter((ent) => {
       if (selectedTypeFilter !== 'ALL' && ent.type !== selectedTypeFilter) return false;
       if (searchQuery && !ent.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
       return true;
     });
-  }, [entities, selectedTypeFilter, searchQuery]);
+  }, [entities, graphNodes, selectedTypeFilter, searchQuery]);
 
   const filteredEdges = useMemo(() => {
     const validNodeIds = new Set(filteredEntities.map((n) => n.id));
-    return MOCK_EDGES.filter((edge) => {
+    return graphEdges.filter((edge) => {
       if (!showAiLinks && edge.epistemicType === 'AI_INFERRED') return false;
       return validNodeIds.has(edge.source) && validNodeIds.has(edge.target);
     });
-  }, [filteredEntities, showAiLinks]);
+  }, [filteredEntities, showAiLinks, graphEdges]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', height: 'calc(100vh - 110px)' }}>

@@ -1,7 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel
+
+class CopilotQueryRequest(BaseModel):
+    query: str
+    context_filters: Optional[Dict[str, Any]] = None
+
+class CopilotQueryResponse(BaseModel):
+    answer: str
+    citations: List[Dict[str, Any]] = []
 
 from backend.db.session import get_db
 from backend.db.models.analytics import RiskScore, Explanation
@@ -116,3 +125,49 @@ async def get_lead_explanation(
         "content": content,
         "model_version": explanation.model_version
     }
+
+@router.post("/copilot/query", response_model=CopilotQueryResponse)
+async def query_copilot(
+    case_id: UUID,
+    request: CopilotQueryRequest,
+    db: Session = Depends(get_db),
+    auth_ctx: CaseAuthContext = Depends(verify_case_access(Permissions.CASE_READ))
+):
+    provider = get_llm_provider()
+    
+    # Base system instructions - strictly instructing no markdown
+    sys_prompt = (
+        "You are an expert criminal network analysis AI copilot for the CNAS Intelligence Workstation.\n"
+        "Your role is to formulate detailed, understandable answers to investigative queries.\n"
+        "CRITICAL FORMATTING RULES:\n"
+        "- DO NOT use any markdown formatting like stars (*), hashes (#), or underscores (_).\n"
+        "- Provide raw text answers only.\n"
+        "- Format with clean line breaks and plain text bullet points (e.g. using dashes or numbers) if needed.\n"
+    )
+    
+    user_prompt = f"Case ID: {case_id}\nQuery: {request.query}\n"
+    
+    try:
+        response = await provider.async_generate([
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_prompt}
+        ])
+        
+        # Post-process to ensure no stars or hashes leak through
+        clean_response = response.replace("*", "").replace("#", "")
+        
+        # Provide a mock citation to show capability
+        mock_citation = {
+            "document_id": "mock-doc-123",
+            "title": "Extracted Graph Context"
+        }
+        
+        return CopilotQueryResponse(
+            answer=clean_response,
+            citations=[mock_citation]
+        )
+    except Exception as e:
+        return CopilotQueryResponse(
+            answer=f"Error generating intelligence response: {str(e)}\n\nPlease ensure your OPENAI_API_KEY environment variable is configured correctly.",
+            citations=[]
+        )

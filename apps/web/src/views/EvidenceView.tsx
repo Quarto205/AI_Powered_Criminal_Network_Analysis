@@ -3,6 +3,7 @@ import { useCase } from '../context/CaseContext';
 import { Badge } from '../components/ui/Badge';
 import { EvidenceDocument } from '../types';
 import { nvidiaNimService } from '../services/nvidiaNimService';
+import { apiClient } from '../services/apiClient';
 import {
   FileText,
   UploadCloud,
@@ -23,7 +24,7 @@ import {
 } from 'lucide-react';
 
 export const EvidenceView: React.FC = () => {
-  const { evidenceDocs, selectedDoc, setSelectedDoc, addEvidenceDocument } = useCase();
+  const { activeCase, evidenceDocs, selectedDoc, setSelectedDoc, addEvidenceDocument } = useCase();
   const [selectedFilter, setSelectedFilter] = useState<'ALL' | 'BANKING' | 'CDR' | 'LEGAL' | 'CUSTOMS'>('ALL');
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [uploadStage, setUploadStage] = useState<number>(0);
@@ -58,43 +59,58 @@ export const EvidenceView: React.FC = () => {
 
   const activeDoc = selectedDoc;
 
-  const handleSimulatedUpload = () => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !activeCase?.id) return;
+
     setIsUploading(true);
     setUploadStage(1);
 
-    const interval = setInterval(() => {
-      setUploadStage((prev) => {
-        if (prev >= 5) {
-          clearInterval(interval);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await apiClient.post<any>(`/api/v1/cases/${activeCase.id}/documents`, formData);
+      if (res.success && res.data) {
+        setUploadStage(3);
+        // Simulate processing for visual feedback
+        setTimeout(() => {
+          setUploadStage(4);
           setTimeout(() => {
+            setUploadStage(5);
+            // Construct new document from response
             const newDoc: EvidenceDocument = {
-              id: `doc-${Date.now()}`,
-              caseId: 'case-del-0891',
-              title: 'Hawala Ledger Cash Sheet Extraction',
-              filename: 'Ledger_CashSheet_Scan_May24.pdf',
+              id: res.data.document_id,
+              caseId: activeCase.id,
+              title: file.name,
+              filename: file.name,
               category: 'BANKING',
-              sha256: '992a881bc091823901928390192389019238901923890192389019283901991a',
-              fileSize: '1.9 MB',
+              sha256: 'Pending Hash', // Or from res.data if available
+              fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
               timestamp: new Date().toISOString(),
               verifiedChainOfCustody: true,
               section65BCertified: true,
-              linkedEntityIds: ['ent-tariq', 'ent-chandni-chowk'],
-              excerpt: 'Optical scan of ledger handwriting with transaction hashes and cash courier signatures.',
+              linkedEntityIds: [],
+              excerpt: 'Document successfully ingested and queued for OCR extraction.',
               metadata: {
-                'Extraction Engine': 'CNAS Forensic OCR v4.2',
-                'Status': 'Certified Ingest',
+                'Status': res.data.status || 'Received',
+                'Job ID': res.data.job_id
               },
             };
             addEvidenceDocument(newDoc);
             setSelectedDoc(newDoc);
             setIsUploading(false);
             setUploadStage(0);
-          }, 600);
-          return 5;
-        }
-        return prev + 1;
-      });
-    }, 500);
+          }, 1000);
+        }, 1000);
+      } else {
+        throw new Error("Upload failed");
+      }
+    } catch (e) {
+      console.error("Failed to upload document:", e);
+      setIsUploading(false);
+      setUploadStage(0);
+    }
   };
 
   return (
@@ -116,8 +132,15 @@ export const EvidenceView: React.FC = () => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <input
+            type="file"
+            id="evidence-upload"
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+            accept=".pdf,.png,.jpg,.jpeg"
+          />
           <button
-            onClick={handleSimulatedUpload}
+            onClick={() => document.getElementById('evidence-upload')?.click()}
             disabled={isUploading}
             style={{
               display: 'flex',

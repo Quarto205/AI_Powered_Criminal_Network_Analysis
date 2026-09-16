@@ -8,9 +8,15 @@ export const LoginView: React.FC = () => {
   const [email, setEmail] = useState('ananya.roy@delhipolice.gov.in');
   const [badgeId, setBadgeId] = useState('DL-SP-9014');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    login(email, badgeId);
+    setError(null);
+    const success = await login(email, badgeId);
+    if (!success) {
+      setError("Invalid credentials. Please check your email and badge ID.");
+    }
   };
 
   return (
@@ -129,6 +135,12 @@ export const LoginView: React.FC = () => {
             Authorized law enforcement & intelligence forensic portal
           </p>
         </div>
+
+        {error && (
+          <div style={{ padding: '10px', backgroundColor: '#fee2e2', color: '#b91c1c', borderRadius: '4px', fontSize: '12px' }}>
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>

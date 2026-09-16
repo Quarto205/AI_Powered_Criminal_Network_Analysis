@@ -1,3 +1,5 @@
+import { apiClient } from './apiClient';
+
 /**
  * NVIDIA NIM Agentic Forensics Service (SIH26189)
  *
@@ -182,47 +184,21 @@ export class NvidiaNimForensicService {
       );
     }
 
-    // Try calling real NVIDIA NIM API if available
+    // Try calling real backend copilot API
     let answerText = '';
     try {
-      if (this.apiKey && this.apiKey.startsWith('nvapi-')) {
-        const response = await fetch(`${this.baseUrl}/chat/completions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.apiKey}`,
-          },
-          body: JSON.stringify({
-            model: 'meta/llama-3.3-70b-instruct', // Or nemotron equivalent on current NIM gateway
-            messages: [
-              {
-                role: 'system',
-                content: `You are the CNAS (Criminal Network Analysis System) AI Copilot, powered by Agentic Graph Intelligence.
-You assist Indian Law Enforcement / Intelligence officers in high-stakes forensic analysis.
-Case Scope: ${caseContext.caseNumber}.
-Guidelines:
-1. Provide objective, evidence-grounded reasoning.
-2. Cross-reference CDR logs, Hawala conduits, shell company hierarchies, and customs manifests.
-3. Cite certified source documents and timestamps.
-4. Always remain strictly non-accusatory and objective.`,
-              },
-              {
-                role: 'user',
-                content: userPrompt,
-              },
-            ],
-            temperature: 0.2,
-            max_tokens: 1024,
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          answerText = data.choices?.[0]?.message?.content || '';
+      const res = await apiClient.post<any>(`/api/v1/cases/${caseContext.caseNumber}/intelligence/copilot/query`, {
+        query: userPrompt,
+        context_filters: {}
+      });
+      if (res.success && res.data) {
+        answerText = res.data.answer;
+        if (res.data.citations && res.data.citations.length > 0) {
+          // merge citations if any
         }
       }
     } catch (e) {
-      // Graceful fallback to offline intelligent GraphRAG engine
+      console.error("Backend copilot query failed, falling back to local simulation", e);
     }
 
     if (!answerText) {
