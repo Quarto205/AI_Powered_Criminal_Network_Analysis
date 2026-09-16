@@ -144,6 +144,18 @@ async def _async_analysis_worker(run_id: UUID, case_id: UUID, session_factory=No
                 from agents.intelligence.pattern_engine import PatternEngine
                 pattern_engine = PatternEngine(db)
                 pattern_engine.run_all_detectors(case_id)
+            if "GAT" in run.task_type.upper():
+                from agents.intelligence.link_prediction_engine import LinkPredictionEngine
+                gat_engine = LinkPredictionEngine(db, run_id)
+                gat_engine.run(case_id)
+
+            # Always run PriorityEngine at the end to synthesize risk scores
+            from agents.intelligence.priority_engine import PriorityEngine
+            priority_engine = PriorityEngine(db, case_id)
+            scores = priority_engine.run_priority_ranking()
+            if scores:
+                db.add_all(scores)
+            db.commit()
 
             run.status = "SUCCESS"
             db.commit()

@@ -47,9 +47,9 @@ class GraphExtractor:
         OPTIONAL MATCH (n)-[r]->(m)
         WHERE m.case_id = $case_id
         RETURN 
-            n.id AS source_id, labels(n) AS source_labels, properties(n) AS source_props,
+            n.entity_id AS source_id, labels(n) AS source_labels, properties(n) AS source_props,
             type(r) AS rel_type, properties(r) AS rel_props,
-            m.id AS target_id
+            m.entity_id AS target_id
         ORDER BY source_id, type(r), target_id
         """
 

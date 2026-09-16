@@ -78,8 +78,12 @@ class Prediction(Base):
     case_id = Column(GUIDType, ForeignKey("cases.case_id", ondelete="CASCADE"), nullable=False, index=True)
     source_ref = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="RESTRICT"), nullable=False)
     target_ref = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="RESTRICT"), nullable=False)
+    predicted_relationship_type = Column(String(50), nullable=False)
     score = Column(Float, nullable=False)
     calibration = Column(String(50), nullable=False)
+    status = Column(String(50), nullable=False, default="INFERRED")
+    metadata_ = Column("metadata", JSONBType, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
 
     model_run = relationship("ModelRun", back_populates="predictions")
     case = relationship("Case")
@@ -102,6 +106,31 @@ class RiskScore(Base):
 
     entity = relationship("Entity")
     model_run = relationship("ModelRun", back_populates="risk_scores")
+
+
+class Explanation(Base):
+    """
+    explanations table: Stores the deterministic or AI-generated explanation for a RiskScore priority ranking.
+    """
+    __tablename__ = "explanations"
+
+    explanation_id = Column(GUIDType, primary_key=True, default=uuid4)
+    score_id = Column(GUIDType, ForeignKey("risk_scores.score_id", ondelete="CASCADE"), nullable=False, index=True, unique=True)
+    target_entity_uuid = Column(GUIDType, ForeignKey("entities.entity_id", ondelete="CASCADE"), nullable=False, index=True)
+    case_id = Column(GUIDType, ForeignKey("cases.case_id", ondelete="CASCADE"), nullable=False, index=True)
+    run_id = Column(GUIDType, ForeignKey("model_runs.run_id", ondelete="CASCADE"), nullable=False, index=True)
+    
+    explanation_text = Column(String, nullable=False)
+    summary = Column(String, nullable=True)
+    context_data = Column(JSONBType, nullable=True)
+    model_version = Column(String(100), nullable=False)
+    provider_type = Column(String(50), nullable=False)  # e.g., "TEMPLATE", "LLM"
+    created_at = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), server_default=func.now())
+
+    risk_score = relationship("RiskScore", backref="explanation")
+    entity = relationship("Entity", foreign_keys=[target_entity_uuid])
+    case = relationship("Case")
+    model_run = relationship("ModelRun")
 
 
 class NetworkMetric(Base):

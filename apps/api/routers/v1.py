@@ -9,6 +9,7 @@ from apps.api.routers.cases import router as cases_router
 from apps.api.routers.documents import router as documents_router
 from apps.api.routers.graph import router as graph_router
 from apps.api.routers.evidence_analysis import router as evidence_analysis_router
+from apps.api.routers.intelligence import router as intelligence_router
 
 v1_router = APIRouter(prefix="/api/v1")
 v1_router.include_router(auth_router)
@@ -16,3 +17,4 @@ v1_router.include_router(cases_router)
 v1_router.include_router(documents_router)
 v1_router.include_router(graph_router)
 v1_router.include_router(evidence_analysis_router)
+v1_router.include_router(intelligence_router)

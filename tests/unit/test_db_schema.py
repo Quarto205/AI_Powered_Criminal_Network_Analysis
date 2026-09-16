@@ -60,7 +60,7 @@ from backend.db.models import (
 )
 from backend.db.triggers import ImmutableRecordError
 
-EXPECTED_33_TABLES = {
+EXPECTED_34_TABLES = {
     # Domain A: Identity / RBAC / Multi-Tenant (6)
     "users",
     "roles",
@@ -98,6 +98,7 @@ EXPECTED_33_TABLES = {
     "exports",
     "agent3_datasets",
     "network_metrics",
+    "explanations",
 }
 
 
@@ -142,22 +143,23 @@ def db_session(db_engine) -> Generator[Session, None, None]:
 
 
 # ==============================================================================
-# 1. SCHEMA COMPLETENESS & TABLE COUNT (33 TABLES)
+# ==============================================================================
+# 1. SCHEMA COMPLETENESS & TABLE COUNT (34 TABLES)
 # ==============================================================================
 
 class TestSchemaCompleteness:
-    """Verifies that all 33 required tables exist with required constraints and columns."""
+    """Verifies that all 34 required tables exist with required constraints and columns."""
 
-    def test_all_33_tables_in_metadata(self):
+    def test_all_34_tables_in_metadata(self):
         registered_tables = set(Base.metadata.tables.keys())
-        assert len(registered_tables) == 33, f"Expected 33 tables, found {len(registered_tables)}"
-        assert registered_tables == EXPECTED_33_TABLES
+        assert len(registered_tables) == 34, f"Expected 34 tables, found {len(registered_tables)}"
+        assert registered_tables == EXPECTED_34_TABLES
 
-    def test_all_33_tables_created_in_database(self, db_engine):
+    def test_all_34_tables_created_in_database(self, db_engine):
         inspector = inspect(db_engine)
         db_tables = set(inspector.get_table_names())
-        assert len(db_tables) == 33
-        assert db_tables == EXPECTED_33_TABLES
+        assert len(db_tables) == 34
+        assert db_tables == EXPECTED_34_TABLES
 
     def test_uuid_primary_keys_on_all_tables(self):
         """All internal primary keys must be UUID type (not autoincrement integer)."""
@@ -518,6 +520,7 @@ class TestORMRoundTrip:
             case_id=case.case_id,
             source_ref=e1.entity_id,
             target_ref=e2.entity_id,
+            predicted_relationship_type="ASSOCIATED_WITH",
             score=0.945,
             calibration="CALIBRATED",
         )
@@ -637,49 +640,64 @@ class TestCrossCaseIntegrity:
 class TestAlembicMigration:
     """Verifies that Alembic discovers revisions, creates all 31 tables, and rolls back cleanly."""
 
-    def test_alembic_upgrade_downgrade_cycle(self, tmp_path):
+    def test_alembic_upgrade_downgrade_cycle(self):
         import sqlite3
+        import os
         from alembic.config import Config
         from alembic import command
 
-        db_file = tmp_path / "alembic_test.db"
-        db_url = f"sqlite:///{db_file.as_posix()}"
+        db_file = "alembic_test_run.db"
+        if os.path.exists(db_file):
+            try:
+                os.remove(db_file)
+            except Exception:
+                pass
+            
+        db_url = f"sqlite:///{db_file}"
 
-        cfg = Config("alembic.ini")
-        cfg.set_main_option("sqlalchemy.url", db_url)
+        try:
+            cfg = Config("alembic.ini")
+            cfg.set_main_option("sqlalchemy.url", db_url)
 
-        # 1. Run upgrade head
-        command.upgrade(cfg, "head")
+            # 1. Run upgrade head
+            command.upgrade(cfg, "head")
 
-        conn = sqlite3.connect(str(db_file))
-        cur = conn.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'alembic_version'")
-        created_tables = {row[0] for row in cur.fetchall()}
-        conn.close()
+            conn = sqlite3.connect(db_file)
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'alembic_version'")
+            created_tables = {row[0] for row in cur.fetchall()}
+            conn.close()
 
-        assert len(created_tables) == 33, f"Expected 33 tables from Alembic upgrade, got {len(created_tables)}"
-        assert created_tables == EXPECTED_33_TABLES
+            assert len(created_tables) == 34, f"Alembic upgrade head did not create 34 tables. Found {len(created_tables)}: {created_tables}"
+            assert created_tables == EXPECTED_34_TABLES
 
-        # 2. Run downgrade base
-        command.downgrade(cfg, "base")
+            # 2. Run downgrade base
+            command.downgrade(cfg, "base")
 
-        conn = sqlite3.connect(str(db_file))
-        cur = conn.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'alembic_version'")
-        tables_after_downgrade = [row[0] for row in cur.fetchall()]
-        conn.close()
+            conn = sqlite3.connect(db_file)
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'alembic_version'")
+            tables_after_downgrade = [row[0] for row in cur.fetchall()]
+            conn.close()
 
-        assert len(tables_after_downgrade) == 0, f"Expected 0 tables after downgrade, found {len(tables_after_downgrade)}"
+            assert len(tables_after_downgrade) == 0, f"Expected 0 tables after downgrade, found {len(tables_after_downgrade)}"
 
-        # 3. Re-run upgrade head
-        command.upgrade(cfg, "head")
+            # 3. Re-run upgrade head
+            command.upgrade(cfg, "head")
 
-        conn = sqlite3.connect(str(db_file))
-        cur = conn.cursor()
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'alembic_version'")
-        recreated_tables = {row[0] for row in cur.fetchall()}
-        conn.close()
+            conn = sqlite3.connect(db_file)
+            cur = conn.cursor()
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name != 'alembic_version'")
+            recreated_tables = {row[0] for row in cur.fetchall()}
+            conn.close()
 
-        assert len(recreated_tables) == 33
-        assert recreated_tables == EXPECTED_33_TABLES
+            assert len(recreated_tables) == 34, "Alembic second upgrade did not create 34 tables."
+            assert recreated_tables == EXPECTED_34_TABLES
+            
+        finally:
+            if os.path.exists(db_file):
+                try:
+                    os.remove(db_file)
+                except Exception:
+                    pass
 
