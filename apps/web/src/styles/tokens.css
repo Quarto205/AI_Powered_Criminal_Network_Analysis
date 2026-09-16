@@ -1,0 +1,74 @@
+/* Calm Intelligence Design Tokens - Synthesized from DESIGN.md */
+:root {
+  /* Canvas & Structural Surfaces */
+  --cnas-bg: #f8f9ff;
+  --cnas-surface: #ffffff;
+  --cnas-surface-subtle: #f1f4f8;
+  --cnas-surface-low: #eff4ff;
+  --cnas-surface-container: #e5eeff;
+  --cnas-surface-high: #dce9ff;
+  --cnas-surface-highest: #d3e4fe;
+  --cnas-surface-dim: #cbdbf5;
+
+  /* Typography Colors */
+  --cnas-text-primary: #0b1c30;
+  --cnas-text-secondary: #43474e;
+  --cnas-text-muted: #73777f;
+  --cnas-text-dim: #94a3b8;
+  --cnas-border: #e4e7ec;
+  --cnas-border-subtle: #eff2f6;
+  --cnas-border-strong: #c3c6cf;
+
+  /* Brand & Core Accents */
+  --cnas-navy: #173b63;
+  --cnas-navy-dark: #002548;
+  --cnas-blue: #2563eb;
+  --cnas-blue-hover: #1d4ed8;
+  --cnas-blue-subtle: #eff6ff;
+  --cnas-blue-border: #bfdbfe;
+
+  /* AI & Inference (Dedicated Purple Accent) */
+  --cnas-ai-primary: #7c3aed;
+  --cnas-ai-container: #4a00a6;
+  --cnas-ai-subtle: #f5f3ff;
+  --cnas-ai-border: #ddd6fe;
+  --cnas-ai-text: #6d28d9;
+
+  /* Semantic Status Indicators */
+  --cnas-verified: #059669;
+  --cnas-verified-bg: #ecfdf5;
+  --cnas-verified-border: #a7f3d0;
+
+  --cnas-review: #d97706;
+  --cnas-review-bg: #fffbeb;
+  --cnas-review-border: #fde68a;
+
+  --cnas-risk: #e11d48;
+  --cnas-risk-bg: #fff1f2;
+  --cnas-risk-border: #fecdd3;
+
+  /* Radii */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Elevations */
+  --shadow-xs: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 4px 0 rgba(15, 23, 42, 0.05), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+  --shadow-md: 0 4px 12px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.03);
+  --shadow-lg: 0 12px 28px -4px rgba(15, 23, 42, 0.09);
+  --shadow-drawer: -6px 0 32px -4px rgba(15, 23, 42, 0.12);
+
+  /* Fonts */
+  --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+
+  /* Transitions */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 240ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 350ms cubic-bezier(0.16, 1, 0.3, 1);
+}

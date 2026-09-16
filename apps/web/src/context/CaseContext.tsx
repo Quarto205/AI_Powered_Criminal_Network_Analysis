@@ -1,94 +1,104 @@
-/**
- * Case & Authorization Context
- * Manages active case, case switching, and role-based permissions.
- */
+import React, { createContext, useContext, useState } from 'react';
+import {
+  CaseFile,
+  EntityDossier,
+  EvidenceDocument,
+  TimelineEvent,
+  PriorityLead
+} from '../types';
+import {
+  INITIAL_CASES,
+  MOCK_ENTITIES,
+  MOCK_EVIDENCE_DOCS,
+  MOCK_TIMELINE_EVENTS,
+  MOCK_PRIORITY_LEADS
+} from '../mocks/data';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { CaseListItem, CaseDetailResponse } from '../contracts/cases';
-import { UserRole } from '../contracts/common';
-import { apiClient } from '../api';
-import { DEMO_CASE_ID } from '../fixtures';
+export type WorkspaceTab =
+  | 'overview'
+  | 'network'
+  | 'timeline'
+  | 'evidence'
+  | 'analysis'
+  | 'copilot'
+  | 'audit'
+  | 'cases';
 
 interface CaseContextType {
-  cases: CaseListItem[];
-  activeCaseId: string | null;
-  activeCase: CaseDetailResponse | null;
-  currentRole: UserRole;
-  setCurrentRole: (role: UserRole) => void;
-  selectCase: (caseId: string) => void;
-  loading: boolean;
-  error: string | null;
-  refreshCase: () => Promise<void>;
+  cases: CaseFile[];
+  activeCase: CaseFile;
+  setActiveCase: (c: CaseFile) => void;
+  activeTab: WorkspaceTab;
+  setActiveTab: (tab: WorkspaceTab) => void;
+  entities: EntityDossier[];
+  selectedEntity: EntityDossier | null;
+  setSelectedEntity: (entity: EntityDossier | null) => void;
+  isDrawerOpen: boolean;
+  setIsDrawerOpen: (open: boolean) => void;
+  evidenceDocs: EvidenceDocument[];
+  selectedDoc: EvidenceDocument | null;
+  setSelectedDoc: (doc: EvidenceDocument | null) => void;
+  timelineEvents: TimelineEvent[];
+  priorityLeads: PriorityLead[];
+  inspectInGraph: (entityId: string) => void;
+  viewDocumentDossier: (docId: string) => void;
+  addEvidenceDocument: (doc: EvidenceDocument) => void;
 }
 
-export const CaseContext = createContext<CaseContextType | undefined>(undefined);
+const CaseContext = createContext<CaseContextType | undefined>(undefined);
 
 export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [cases, setCases] = useState<CaseListItem[]>([]);
-  const [activeCaseId, setActiveCaseId] = useState<string | null>(DEMO_CASE_ID);
-  const [activeCase, setActiveCase] = useState<CaseDetailResponse | null>(null);
-  const [currentRole, setCurrentRole] = useState<UserRole>('SUPERVISOR');
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [cases] = useState<CaseFile[]>(INITIAL_CASES);
+  const [activeCase, setActiveCase] = useState<CaseFile>(INITIAL_CASES[0]);
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('copilot');
+  const [entities] = useState<EntityDossier[]>(MOCK_ENTITIES);
+  const [selectedEntity, setSelectedEntity] = useState<EntityDossier | null>(MOCK_ENTITIES[0]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [evidenceDocs, setEvidenceDocs] = useState<EvidenceDocument[]>(MOCK_EVIDENCE_DOCS);
+  const [selectedDoc, setSelectedDoc] = useState<EvidenceDocument | null>(null);
+  const [timelineEvents] = useState<TimelineEvent[]>(MOCK_TIMELINE_EVENTS);
+  const [priorityLeads] = useState<PriorityLead[]>(MOCK_PRIORITY_LEADS);
 
-  const fetchCases = useCallback(async () => {
-    try {
-      const resp = await apiClient.listCases();
-      setCases(resp.data.cases);
-      if (!activeCaseId && resp.data.cases.length > 0) {
-        setActiveCaseId(resp.data.cases[0].case_id);
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load cases');
-    }
-  }, [activeCaseId]);
-
-  const fetchActiveCase = useCallback(async (caseId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const resp = await apiClient.getCase(caseId);
-      setActiveCase(resp.data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : `Failed to load case ${caseId}`);
-      setActiveCase(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCases();
-  }, [fetchCases]);
-
-  useEffect(() => {
-    if (activeCaseId) {
-      fetchActiveCase(activeCaseId);
-    }
-  }, [activeCaseId, fetchActiveCase]);
-
-  const selectCase = (caseId: string) => {
-    setActiveCaseId(caseId);
+  // Cross-workspace navigation: Inspect in Graph
+  const inspectInGraph = (entityId: string) => {
+    const ent = entities.find((e) => e.id === entityId) || entities[0];
+    setSelectedEntity(ent);
+    setIsDrawerOpen(true);
+    setActiveTab('network');
   };
 
-  const refreshCase = async () => {
-    if (activeCaseId) {
-      await fetchActiveCase(activeCaseId);
-    }
+  // Cross-workspace navigation: View Document Dossier
+  const viewDocumentDossier = (docId: string) => {
+    const doc = evidenceDocs.find((d) => d.id === docId) || evidenceDocs[0];
+    setSelectedDoc(doc);
+    setActiveTab('evidence');
+  };
+
+  const addEvidenceDocument = (newDoc: EvidenceDocument) => {
+    setEvidenceDocs((prev) => [newDoc, ...prev]);
   };
 
   return (
     <CaseContext.Provider
       value={{
         cases,
-        activeCaseId,
         activeCase,
-        currentRole,
-        setCurrentRole,
-        selectCase,
-        loading,
-        error,
-        refreshCase,
+        setActiveCase,
+        activeTab,
+        setActiveTab,
+        entities,
+        selectedEntity,
+        setSelectedEntity,
+        isDrawerOpen,
+        setIsDrawerOpen,
+        evidenceDocs,
+        selectedDoc,
+        setSelectedDoc,
+        timelineEvents,
+        priorityLeads,
+        inspectInGraph,
+        viewDocumentDossier,
+        addEvidenceDocument,
       }}
     >
       {children}
@@ -96,7 +106,7 @@ export const CaseProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-export const useCase = (): CaseContextType => {
+export const useCase = () => {
   const context = useContext(CaseContext);
   if (!context) {
     throw new Error('useCase must be used within a CaseProvider');
